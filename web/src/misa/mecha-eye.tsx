@@ -1,0 +1,243 @@
+import { useEffect, useId, useRef, useState } from "react";
+import { motion, useReducedMotion, useSpring } from "framer-motion";
+import type { MotionValue } from "framer-motion";
+import { eyeColors, useSkin } from "./skin";
+import { IrisPattern, Pupil } from "./eye-parts";
+
+/** Optional sink for where the iris is pointing (SVG units, ±MAX_LOOK). */
+export type EyeLook = { x: MotionValue<number>; y: MotionValue<number> };
+
+const SOCKET = 98; // socket radius inside the halo's inner plate (r=104)
+const IRIS = 56;
+export const MAX_LOOK = 30; // how far the iris can travel from center
+const IDLE_MS = 2200; // pointer quiet for this long → eye starts looking around
+
+
+/**
+ * Robotic eye drawn inside the MechaHalo SVG (center cx, cy).
+ * Tracks the cursor; when the pointer is idle (or on touch screens) it glances around in snappy
+ * saccades, blinks with armored shutters, and its aperture breathes.
+ */
+export default function MechaEye({
+  cx,
+  cy,
+  charged = false,
+  look,
+}: {
+  cx: number;
+  cy: number;
+  charged?: boolean;
+  look?: EyeLook;
+}) {
+  const { p, skin } = useSkin();
+  const { iris: e, half, core } = eyeColors(skin, p);
+  const reduce = useReducedMotion();
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const anchor = useRef<SVGCircleElement>(null);
+  const lastPointer = useRef(0);
+  const [blink, setBlink] = useState(false);
+  const [aperture, setAperture] = useState(1);
+
+  // Stiff, lightly damped springs read as servo motors: quick snap, tiny settle.
+  const spring = reduce ? { stiffness: 90, damping: 20 } : { stiffness: 320, damping: 24, mass: 0.6 };
+  const x = useSpring(0, spring);
+  const y = useSpring(0, spring);
+
+  // Mirror the iris position out to whoever wants to follow the gaze (e.g. the camera's ray).
+  useEffect(() => {
+    if (!look) return;
+    const a = x.on("change", (v) => look.x.set(v));
+    const b = y.on("change", (v) => look.y.set(v));
+    return () => {
+      a();
+      b();
+    };
+  }, [look, x, y]);
+  // Highlights lag slightly behind the iris for a glassy lens feel.
+  const hx = useSpring(0, { stiffness: 180, damping: 20 });
+  const hy = useSpring(0, { stiffness: 180, damping: 20 });
+
+  const lookAt = (dx: number, dy: number) => {
+    x.set(dx);
+    y.set(dy);
+    hx.set(dx * 0.75);
+    hy.set(dy * 0.75);
+  };
+
+  // Follow the cursor, and on touch screens look at wherever the finger lands or drags.
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" ? false : e.type === "pointermove" && e.pressure === 0) return;
+      const el = anchor.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0) return; // hidden instance
+      lastPointer.current = performance.now();
+      const vx = e.clientX - (r.left + r.width / 2);
+      const vy = e.clientY - (r.top + r.height / 2);
+      const dist = Math.hypot(vx, vy) || 1;
+      // Ease toward full deflection over ~450px so nearby movement still reads.
+      const reach = MAX_LOOK * Math.min(1, dist / 450) ** 0.7;
+      lookAt((vx / dist) * reach, (vy / dist) * reach);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onMove);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Idle: glance around in saccades, occasionally recentering.
+  useEffect(() => {
+    if (reduce) return;
+    let t = 0;
+    const glance = () => {
+      if (performance.now() - lastPointer.current > IDLE_MS) {
+        if (Math.random() < 0.25) {
+          lookAt(0, 0);
+        } else {
+          const a = Math.random() * Math.PI * 2;
+          const d = MAX_LOOK * (0.45 + Math.random() * 0.55);
+          lookAt(Math.cos(a) * d, Math.sin(a) * d * 0.75);
+        }
+        setAperture(0.8 + Math.random() * 0.4);
+      }
+      t = window.setTimeout(glance, 900 + Math.random() * 1600);
+    };
+    t = window.setTimeout(glance, 1200);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduce]);
+
+  // Blink every few seconds, sometimes a double blink.
+  useEffect(() => {
+    if (reduce) return;
+    let t = 0;
+    const shut = (after: () => void) => {
+      setBlink(true);
+      t = window.setTimeout(() => {
+        setBlink(false);
+        after();
+      }, 130);
+    };
+    const schedule = () => {
+      t = window.setTimeout(
+        () =>
+          shut(() => {
+            if (Math.random() < 0.2) t = window.setTimeout(() => shut(schedule), 160);
+            else schedule();
+          }),
+        2800 + Math.random() * 3500,
+      );
+    };
+    schedule();
+    return () => window.clearTimeout(t);
+  }, [reduce]);
+
+  const pupilScale = charged ? 1.5 : aperture;
+  const origin = { transformOrigin: `${cx}px ${cy}px` };
+  const lid = { duration: 0.09, ease: [0.7, 0, 0.3, 1] as const };
+
+  return (
+    <g>
+      <defs>
+        <clipPath id={`${uid}-socket`}>
+          <circle cx={cx} cy={cy} r={SOCKET} />
+        </clipPath>
+        {[["iris", e] as const, ["iris2", half ?? e] as const].map(([name, c]) => (
+          <radialGradient key={name} id={`${uid}-${name}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={c.hot} />
+            <stop offset="22%" stopColor={c.light} />
+            <stop offset="48%" stopColor={c.main} />
+            <stop offset="78%" stopColor={c.irisDark} />
+            <stop offset="100%" stopColor={c.irisDeep} />
+          </radialGradient>
+        ))}
+        <clipPath id={`${uid}-half`}>
+          <rect x={cx} y={cy - IRIS - 20} width={IRIS + 20} height={(IRIS + 20) * 2} />
+        </clipPath>
+        <radialGradient id={`${uid}-socket-shade`} cx="50%" cy="50%" r="50%">
+          <stop offset="60%" stopColor={p.ink} stopOpacity="0" />
+          <stop offset="100%" stopColor={p.ink} stopOpacity="0.95" />
+        </radialGradient>
+      </defs>
+
+      {/* invisible anchor used to locate the eye on screen */}
+      <circle ref={anchor} cx={cx} cy={cy} r={SOCKET} fill="none" />
+
+      <g clipPath={`url(#${uid}-socket)`}>
+        {/* socket backplate */}
+        <circle cx={cx} cy={cy} r={SOCKET} fill={p.deep} />
+        <g stroke={p.main} strokeOpacity="0.12" strokeWidth="1">
+          <line x1={cx - SOCKET} y1={cy} x2={cx + SOCKET} y2={cy} />
+          <line x1={cx} y1={cy - SOCKET} x2={cx} y2={cy + SOCKET} />
+          <circle cx={cx} cy={cy} r={IRIS + MAX_LOOK} fill="none" strokeDasharray="2 6" />
+        </g>
+
+        {/* iris assembly */}
+        <motion.g style={{ x, y }}>
+          {/* glow bloom */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={IRIS + 14}
+            fill={e.main}
+            opacity={charged ? 0.35 : 0.18}
+            style={{ filter: "blur(10px)", transition: "opacity 300ms" }}
+          />
+          {half ? (
+            <circle cx={cx} cy={cy} r={IRIS + 14} fill={half.main} opacity={charged ? 0.35 : 0.18} clipPath={`url(#${uid}-half)`} style={{ filter: "blur(10px)" }} />
+          ) : null}
+          <circle cx={cx} cy={cy} r={IRIS} fill={`url(#${uid}-iris)`} />
+          {half ? <circle cx={cx} cy={cy} r={IRIS} fill={`url(#${uid}-iris2)`} clipPath={`url(#${uid}-half)`} /> : null}
+          <circle cx={cx} cy={cy} r={IRIS} fill="none" stroke={e.light} strokeOpacity="0.85" strokeWidth="2" />
+          <circle cx={cx} cy={cy} r={IRIS - 6} fill="none" stroke={p.ink} strokeOpacity="0.55" strokeWidth="1.5" strokeDasharray="3 3" />
+
+          {/* iris markings, slowly turning */}
+          <IrisPattern cx={cx} cy={cy} kind={skin.iris} c={{ ink: p.ink, hot: e.hot, light: e.light }} origin={origin} />
+
+          {/* aperture: pupil + shutter blades, dilates and contracts */}
+          <motion.g
+            style={origin}
+            animate={{ scale: pupilScale, rotate: charged ? 60 : (aperture - 1) * 90 }}
+            transition={{ type: "spring", stiffness: 220, damping: 18 }}
+          >
+            <Pupil cx={cx} cy={cy} kind={skin.pupil} c={{ ink: p.ink, main: e.main, core }} />
+          </motion.g>
+        </motion.g>
+
+        {/* lens highlights */}
+        <motion.g style={{ x: hx, y: hy }} pointerEvents="none">
+          <ellipse cx={cx - 20} cy={cy - 22} rx={8} ry={5.5} fill="#fff" opacity="0.75" transform={`rotate(-35 ${cx - 20} ${cy - 22})`} />
+          <circle cx={cx + 16} cy={cy + 14} r={2.4} fill="#fff" opacity="0.45" />
+        </motion.g>
+
+        {/* inner vignette */}
+        <circle cx={cx} cy={cy} r={SOCKET} fill={`url(#${uid}-socket-shade)`} pointerEvents="none" />
+
+        {/* armored shutter lids */}
+        <motion.g initial={false} animate={{ y: blink ? 0 : -SOCKET - 4 }} transition={lid}>
+          <rect x={cx - SOCKET} y={cy - SOCKET} width={SOCKET * 2} height={SOCKET} fill={p.socket} />
+          <g stroke={p.main} strokeOpacity="0.25" strokeWidth="1">
+            <line x1={cx - SOCKET} y1={cy - 30} x2={cx + SOCKET} y2={cy - 30} />
+            <line x1={cx - SOCKET} y1={cy - 60} x2={cx + SOCKET} y2={cy - 60} />
+          </g>
+          <line x1={cx - SOCKET} y1={cy} x2={cx + SOCKET} y2={cy} stroke={p.main} strokeWidth="3" />
+        </motion.g>
+        <motion.g initial={false} animate={{ y: blink ? 0 : SOCKET + 4 }} transition={lid}>
+          <rect x={cx - SOCKET} y={cy} width={SOCKET * 2} height={SOCKET} fill={p.socket} />
+          <g stroke={p.main} strokeOpacity="0.25" strokeWidth="1">
+            <line x1={cx - SOCKET} y1={cy + 30} x2={cx + SOCKET} y2={cy + 30} />
+            <line x1={cx - SOCKET} y1={cy + 60} x2={cx + SOCKET} y2={cy + 60} />
+          </g>
+          <line x1={cx - SOCKET} y1={cy} x2={cx + SOCKET} y2={cy} stroke={p.main} strokeWidth="3" />
+        </motion.g>
+      </g>
+
+      {/* socket rim */}
+      <circle cx={cx} cy={cy} r={SOCKET} fill="none" stroke={p.main} strokeOpacity="0.7" strokeWidth="2" />
+    </g>
+  );
+}

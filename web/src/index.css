@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/* Tokens copied from the portfolio's ΑΘΗΝΑ theme */
+@theme {
+  --color-ink: #0b0705;
+  --color-surface: #140d0a;
+  --color-cream: #f6ece5;
+  --color-sand: #c3aa9a;
+  --color-dim: #8d7465;
+  --color-ember: #fa7636;
+  --color-peach: #ffb48a;
+  --color-line: rgb(250 118 54 / 0.2);
+
+  --font-display: "Cinzel", ui-serif, Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --animate-spin-slow: spin 60s linear infinite;
+  --animate-spin-rev: spin-rev 40s linear infinite;
+
+  @keyframes spin-rev {
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+}
+
+/* Overridden at runtime by the active skin (see misa/skin.ts). */
+:root {
+  --ember-rgb: 250 118 54;
+  --peach-rgb: 255 180 138;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-line);
+  }
+
+  /* The window is see-through: only M.I.S.A. herself is drawn. */
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  body {
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+  }
+
+  input,
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  ::selection {
+    background: rgb(var(--ember-rgb) / 0.35);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-peach);
+    outline-offset: 3px;
+  }
+}
+
+@utility bg-gold-gradient {
+  background: linear-gradient(100deg, var(--color-ember) 0%, var(--color-peach) 100%);
+}
+
+@utility hud-grid {
+  background-image:
+    linear-gradient(rgb(var(--ember-rgb) / 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--ember-rgb) / 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 40%, transparent 100%);
+}
+
+@utility scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.025) 0px,
+    rgb(255 255 255 / 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+@utility chamfer {
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+@utility chamfer-sm {
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.halo-flow {
+  animation: halo-flow var(--flow, 2.4s) linear infinite;
+}
+@keyframes halo-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.halo-pulse {
+  animation: halo-pulse 0.9s ease-out infinite;
+}
+@keyframes halo-pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+/* Thin, dark scrollbar for the message list */
+.messages::-webkit-scrollbar {
+  width: 6px;
+}
+.messages::-webkit-scrollbar-thumb {
+  background: rgb(var(--ember-rgb) / 0.3);
+}

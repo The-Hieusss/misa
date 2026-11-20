@@ -1,0 +1,50 @@
+#!/bin/zsh
+# Builds the web UI, then the Swift app, and bundles both into build/M.I.S.A..app
+set -e
+ROOT="${0:A:h:h}"
+APP="$ROOT/build/M.I.S.A..app"
+
+echo "→ Building web UI"
+cd "$ROOT/web"
+JS="${MISA_JS:-$(command -v bun >/dev/null && echo bun || echo npm)}"
+if [[ $JS == bun ]]; then
+  bun install --frozen-lockfile >/dev/null 2>&1 || bun install
+  bun run build
+else
+  npm install --no-audit --no-fund
+  npm run build
+fi
+
+echo "→ Building Swift app"
+cd "$ROOT/app"
+swift build -c release
+BIN="$(swift build -c release --show-bin-path)/MISA"
+
+echo "→ Assembling $APP"
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$BIN" "$APP/Contents/MacOS/MISA"
+cp -R "$ROOT/web/dist" "$APP/Contents/Resources/web"
+
+cat > "$APP/Contents/Info.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>M.I.S.A.</string>
+  <key>CFBundleDisplayName</key><string>M.I.S.A.</string>
+  <key>CFBundleIdentifier</key><string>app.misa.assistant</string>
+  <key>CFBundleExecutable</key><string>MISA</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSUIElement</key><true/>
+  <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>
+EOF
+
+# Ad-hoc signature so macOS will run it locally.
+codesign --force --sign - "$APP" >/dev/null
+echo "✓ Built $APP"
