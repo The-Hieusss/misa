@@ -2,8 +2,6 @@
 
 A floating assistant for macOS. She sits anywhere on your screen, above every app, and opens into a chat when you click her or press **⌥Space**. Everything runs on your Mac: no account, no API key, no subscription.
 
-> **Status: prototype.** She understands requests by keywords for now; Apple's on-device model comes next.
-
 ## What she can do
 
 **Drop files on her**, then pick:
