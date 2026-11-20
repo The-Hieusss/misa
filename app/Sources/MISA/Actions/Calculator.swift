@@ -1,7 +1,7 @@
 import Foundation
 
-/// Quick math, like the 476 project's `safe_eval`: a tiny parser that only understands numbers,
-/// + - * / ^ %, parentheses and a few functions. Nothing is ever executed as code.
+/// Quick math, a tiny parser that only understands numbers,
+/// + - * / ^ %, parentheses and a few functions. 
 enum Calculator {
     /// Returns nil when the text isn't math, so other abilities can try.
     static func answer(_ raw: String) -> Reply? {
@@ -48,7 +48,7 @@ enum Calculator {
         }
     }
 
-    /// Evaluates a sub-expression, e.g. the "$84.50" in "15% of $84.50".
+    /// Evaluates a sub-expression
     static func eval(_ s: String) -> Double? {
         var p = Parser(words(s))
         return try? p.parse()
