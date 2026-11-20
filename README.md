@@ -74,12 +74,10 @@ Check **Launch at Login** in the menu bar menu and she starts every time you log
 
 ### Putting her away
 
-When you don't need her on screen, put her away and she hangs from the menu bar as a surveillance camera (like the portfolio's phone view): her eye follows your cursor, a scan ray sweeps now and then, and a REC light blinks.
+When you don't need her on screen, put her away and she hangs from the menu bar.
 
 - **Put away:** the ⤒ button in the chat header, "Put Away in Menu Bar" in the menu, saying "go away" or "put yourself away", or dragging her up into the menu bar.
 - **Bring back:** click the camera, or press **⌥Space** to bring her back with the chat open. Right-click the camera for the menu.
-
-Only the camera itself catches clicks; everything else (including the scan ray) clicks through. She stays put away after you quit and reopen the app.
 
 She opens the chat toward the middle of the screen, so it works in any corner.
 
