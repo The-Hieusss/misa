@@ -1,4 +1,4 @@
-# M.I.S.A.
+# M.I.S.A: Mac Internal Services Assistant
 
 A floating assistant for macOS. She sits anywhere on your screen, above every app, and opens into a chat when you click her or press **⌥Space**. Everything runs on your Mac: no account, no API key, no subscription.
 
