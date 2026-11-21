@@ -60,6 +60,19 @@ enum FileOps {
         return dest
     }
 
+    /// Copies without ever overwriting. Returns where the copy landed.
+    @discardableResult
+    static func copy(_ src: URL, into dir: URL) throws -> URL {
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = uniqueURL(in: dir, name: src.lastPathComponent)
+        try fm.copyItem(at: src, to: dest)
+        return dest
+    }
+
+    static func modified(_ url: URL) -> Date {
+        (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+    }
+
     static func trash(_ url: URL) throws {
         try fm.trashItem(at: url, resultingItemURL: nil)
     }

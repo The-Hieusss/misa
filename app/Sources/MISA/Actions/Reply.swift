@@ -20,6 +20,8 @@ struct Reply {
     var confirm: Confirm? = nil
     /// Files this reply produced, for "Show in Finder".
     var outputs: [URL] = []
+    /// Where the dropped files are now, after a move, so "this" keeps pointing at them.
+    var replacesFiles: [URL]? = nil
 
     var json: [String: Any] {
         var m: [String: Any] = [

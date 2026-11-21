@@ -66,6 +66,7 @@ final class Brain {
             DispatchQueue.main.async {
                 if let c = reply.confirm { self.pending[c.id] = c }
                 if !reply.outputs.isEmpty { self.outputs = reply.outputs }
+                if let moved = reply.replacesFiles { self.files = moved }
                 done(reply)
             }
         }
@@ -96,6 +97,19 @@ final class Brain {
             }
         }
 
+        // Move or copy files: "move this to Desktop", "copy Homework 6.pdf to Documents", "undo"
+        if ["undo", "undo that", "undo it", "undo the move", "undo the copy", "put it back", "put them back", "move it back", "move them back"]
+            .contains(t.trimmingCharacters(in: CharacterSet(charactersIn: " .!"))) {
+            return { MoveFiles.undo() }
+        }
+        if let req = MoveFiles.parse(raw),
+           !has(t, "timer", "focus", "break", "countdown", "menu bar", "clipboard", "canvas", "for ai", "claude", "chatgpt") {
+            if req.dest.lowercased().contains("disposable") && !files.isEmpty && MoveFiles.meansDropped(req.source) {
+                return { DisposableActions.mark(files) }
+            }
+            return { MoveFiles.run(req, dropped: files) }
+        }
+
         // Quit apps: "quit Spotify", "close Safari and Notes" (before the timer, which also hears "quit")
         if let rest = AppLauncher.target(of: raw, verbs: AppLauncher.quitVerbs),
            !has(t, "timer", "focus", "break", "countdown", "pomodoro", "chat") {
@@ -105,16 +119,19 @@ final class Brain {
         // Timer
         if let action = timerAction(t, raw: raw) { return action }
 
-        // Open apps: "open Claude", "launch Safari and Notes"
+        // Open apps and websites: "open Claude", "launch Safari and Notes", "open youtube.com"
         if let rest = AppLauncher.target(of: raw) {
             let firm = ["open", "launch", "fire up", "bring up", "pull up", "switch to"].contains { t.hasPrefix($0 + " ") || t.contains(" \($0) ") }
-            if let reply = AppLauncher.open(rest) { return { reply } }
+            if let reply = AppLauncher.open(rest, raw: raw) { return { reply } }
             if firm { return { AppLauncher.notFound(rest) } }
         }
 
         // Unit conversions, then plain math (both need a number)
         if let r = UnitConverter.answer(raw) { return { r } }
         if let r = Calculator.answer(raw) { return { r } }
+
+        // Web search: "search for mac shortcuts", "google pomodoro technique", "search youtube for lofi"
+        if let r = WebOpener.search(raw) { return { r } }
 
         if has(t, "disposable", "throw away", "throwaway", "temporary", "dont need", "don't need") {
             if !files.isEmpty && has(t, "mark", "make", "move", "these", "them", "this", "it", "throw away", "throwaway", "temporary", "dont need", "don't need") {
@@ -258,6 +275,7 @@ final class Brain {
             • Copy the text of PDFs, Word files or a code folder for AI
             • Prep a file for Canvas (PDF + a proper file name)
             • Mark files disposable (Trash in \(DisposableActions.hours)h)
+            • Move or copy them ("move this to Desktop")
 
             Or ask me to:
             • Start a focus timer ("focus for 25 min", "take a break")
@@ -267,7 +285,9 @@ final class Brain {
             • Save new screenshots to a folder
             • Tidy old downloads
             • Empty the Trash
+            • Move a file by name ("move Homework 6.pdf to Downloads"), or undo it
             • Open or quit apps ("open Claude", "quit Spotify")
+            • Open websites or search ("open youtube.com", "search for mac shortcuts")
             • Show what's using your disk
             • Show what's in Disposable, or keep a file
             """, suggestions: Array(Self.starters.dropFirst()))

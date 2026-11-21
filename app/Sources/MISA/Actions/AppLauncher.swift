@@ -113,14 +113,20 @@ enum AppLauncher {
         return nil
     }
 
-    /// Opens the apps named in `rest`. Returns nil when nothing matched, so the request can go elsewhere.
-    static func open(_ rest: String) -> Reply? {
-        let wanted = names(in: rest)
-        guard !wanted.isEmpty else { return nil }
-        let apps = installed()
-        var opened: [String] = [], missing: [String] = []
+    /// Opens the apps (and websites) named in `rest`. Returns nil when nothing matched, so the
+    /// request can go elsewhere. `raw` keeps the original case for URLs.
+    static func open(_ rest: String, raw: String) -> Reply? {
+        let links = WebOpener.links(in: raw)
+        let wanted = names(in: rest).filter { !WebOpener.isLink($0) }
+        guard !wanted.isEmpty || !links.isEmpty else { return nil }
+        let apps = wanted.isEmpty ? [] : installed()
+        var opened: [String] = [], pages: [URL] = links, missing: [String] = []
         for w in wanted {
-            guard let app = find(w, in: apps) else { missing.append(w); continue }
+            // An app with that name wins; otherwise a website she knows ("youtube", "gmail").
+            guard let app = find(w, in: apps) else {
+                if let url = WebOpener.site(w) { pages.append(url) } else { missing.append(w) }
+                continue
+            }
             guard !opened.contains(app.name) else { continue }
             let config = NSWorkspace.OpenConfiguration()
             config.activates = true
@@ -129,16 +135,18 @@ enum AppLauncher {
             }
             opened.append(app.name)
         }
-        guard !opened.isEmpty else { return nil }
-        FileOps.log("open-app: \(opened.joined(separator: ", "))")
-        var text = "Opening \(list(opened))."
+        guard !opened.isEmpty || !pages.isEmpty else { return nil }
+        if !opened.isEmpty { FileOps.log("open-app: \(opened.joined(separator: ", "))") }
+        if !pages.isEmpty { WebOpener.open(pages) }
+        var text = "Opening \(list(opened + pages.map(WebOpener.label)))."
         if !missing.isEmpty { text += " I couldn't find \(list(missing.map { "“\($0)”" }))." }
         return Reply(text: text)
     }
 
     static func notFound(_ rest: String) -> Reply {
         let what = names(in: rest).first ?? rest
-        return Reply(text: "I couldn't find an app called “\(what)” in Applications.")
+        let tip = what.contains(".") ? "" : " For a website, give me its address, like “\(what.replacingOccurrences(of: " ", with: "")).com”."
+        return Reply(text: "I couldn't find an app or website called “\(what)”.\(tip)")
     }
 
     // MARK: Quitting

@@ -14,6 +14,7 @@ A floating assistant for macOS. She sits anywhere on your screen, above every ap
 | Convert videos to MP4 | `avconvert`, built into macOS |
 | Copy text for AI | Text from PDFs, Word, RTF, web pages, code files, or a whole code folder (skips `node_modules`, `.git`, builds) goes to your clipboard |
 | Prep for Canvas | Makes a PDF named like `Than_Homework_6_2026-11-19.pdf` |
+| Move or copy | "Move this to Desktop", "copy these to Documents", "put it in CHM 101", "move it to the Trash". Folders by name (Spotlight) or by path like `~/School/Spring`. Never overwrites: a clashing name gets a number. **Undo** puts things back |
 | Mark disposable | Moves files to `~/Disposable` ([Disposable Downloads](https://github.com/The-Hieusss/disposable-downloads) trashes them on a timer) |
 
 **Or ask her to:**
@@ -24,7 +25,10 @@ A floating assistant for macOS. She sits anywhere on your screen, above every ap
 - tidy screenshots off your Desktop into `~/Screenshots/<year-month>/`, or trash ones older than 7 days
 - save new screenshots to `~/Screenshots` instead of the Desktop
 - tidy downloads older than 30 days (moves them to Disposable)
+- move a file by name: "move Homework 6.pdf to Downloads". She finds it with Spotlight and asks which one if several match. Every move shows a confirm card first, and "undo" reverses the last one
 - open apps: "open Claude", "launch Safari and Notes", "open vs code". She looks in Applications, Utilities and the system apps, and understands nicknames like "chrome", "settings" and "word"
+- open websites: "open youtube.com", "go to github.com/apple", or sites she knows by name like "open gmail" or "open youtube and wikipedia" (an app with the same name wins). They open in your default browser
+- search the web: "search for mac shortcuts", "google pomodoro technique", "search youtube for lofi beats"
 - quit apps: "quit Spotify", "close Safari and Notes". Apps quit the normal way, so anything with unsaved work asks first. "Quit everything" lists the open apps on a confirm card first
 - empty the Trash: "empty the trash", "take out the trash". She lists what's in it first and only empties it when you click the card. Finder does the emptying, so macOS asks once to let her control Finder
 - show what's using your disk (read-only)
