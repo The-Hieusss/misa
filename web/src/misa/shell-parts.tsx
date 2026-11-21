@@ -40,12 +40,56 @@ export type RingSpec = {
   gyro?: boolean;
   /** Multiplier on how far plates slide out during the overclock spin. */
   push?: number;
+  /** Custom plate outline (default: a chamfered arc plate). Drawn with the even-odd rule, so it can have holes. */
+  shape?: (s: Seg) => string;
+  /** Skip the arc trim (edge highlights, flow light, screws, vents) for shapes it doesn't fit. */
+  plain?: boolean;
+  /** Radius for plate badges (default: just inside the plate's inner edge). */
+  badgeR?: number;
+  /** A full ring drawn under the plates (r = center radius, w = width). */
+  track?: { r: number; w: number };
 };
 
 const every = (n: number, offset = 0) => Array.from({ length: n }, (_, i) => offset + (i * 360) / n);
 const ring = (mids: number[], span: number, r1: number, r2: number, badge: boolean): Seg[] =>
   mids.map((mid, index) => ({ mid, a0: mid - span / 2, a1: mid + span / 2, r1, r2, badge, index }));
 const DIAG = every(4, 45);
+const deg = (rad: number) => (rad * 180) / Math.PI;
+const P = (r: number, a: number) => pt(r, a).map((v) => v.toFixed(2)).join(" ");
+
+/** A rounded capsule along an arc (round ends). */
+function capsule(r1: number, r2: number, a0: number, a1: number) {
+  const h = (r2 - r1) / 2;
+  const cap = deg(h / ((r1 + r2) / 2));
+  const big = a1 - a0 - 2 * cap > 180 ? 1 : 0;
+  return `M${P(r2, a0 + cap)} A${r2} ${r2} 0 ${big} 1 ${P(r2, a1 - cap)} A${h} ${h} 0 0 1 ${P(r1, a1 - cap)} A${r1} ${r1} 0 ${big} 0 ${P(r1, a0 + cap)} A${h} ${h} 0 0 1 ${P(r2, a0 + cap)} Z`;
+}
+
+/** Hex frame side: straight outer and inner edges between the corners. */
+const hexSide = (s: Seg) => `M${P(196, s.a0)} L${P(196, s.a1)} L${P(170, s.a1 - 2.5)} L${P(170, s.a0 + 2.5)} Z`;
+
+/** Band with angled saw teeth along the outside. */
+function sawPlate(s: Seg) {
+  const pts = [P(s.r2, s.a0)];
+  for (let a = s.a0; a + 6 <= s.a1; a += 6) pts.push(P(s.r2 + 9, a + 5), P(s.r2, a + 6));
+  pts.push(P(s.r2, s.a1), P(s.r1, s.a1));
+  return `M${pts.join(" L")} A${s.r1} ${s.r1} 0 0 0 ${P(s.r1, s.a0)} Z`;
+}
+
+/** Plate with a pointed outer tip. */
+const petal = (s: Seg) => {
+  const k = (s.a1 - s.a0) * 0.3;
+  return `M${P(s.r2, s.a0)} Q${P(s.r2 + 14, s.a0 + k)} ${P(199, s.mid)} Q${P(s.r2 + 14, s.a1 - k)} ${P(s.r2, s.a1)} L${P(s.r1, s.a1 - 4)} A${s.r1} ${s.r1} 0 0 0 ${P(s.r1, s.a0 + 4)} Z`;
+};
+
+/** Hollow chain link. */
+const link = (s: Seg) => `${capsule(s.r1, s.r2, s.a0, s.a1)} ${capsule(s.r1 + 4, s.r2 - 4, s.a0 + 3, s.a1 - 3)}`;
+
+/** Heavy arm that widens outward, with a notch at the tip. */
+const arm = (s: Seg) =>
+  `M${P(158, s.mid - 10)} L${P(197, s.mid - 14)} L${P(197, s.mid - 4)} L${P(190, s.mid)} L${P(197, s.mid + 4)} L${P(197, s.mid + 14)} L${P(158, s.mid + 10)} Z`;
+
+const seg = (mid: number, a0: number, a1: number, r1: number, r2: number, badge: boolean, index: number): Seg => ({ mid, a0, a1, r1, r2, badge, index });
 
 export const RING_SPECS: Record<Skin["ring"], RingSpec> = {
   plates4: { segs: ring(every(4), 66, 160, 184, true), clamps: DIAG, chamfer: 4 },
@@ -56,12 +100,26 @@ export const RING_SPECS: Record<Skin["ring"], RingSpec> = {
   crown: { segs: ring(every(4), 52, 160, 184, true), clamps: DIAG, chamfer: 4, spikes: true },
   shards: { segs: ring(every(8), 22, 164, 186, false), clamps: every(4, 22.5), chamfer: 6, push: 1.8 },
   gyro: { segs: [], clamps: DIAG, chamfer: 0, gyro: true },
+  hex: { segs: ring(every(6), 54, 170, 196, true), clamps: [30, 150, 210, 330], chamfer: 0, shape: hexSide, plain: true, badgeR: 163 },
+  saw: { segs: ring(every(4), 88.5, 164, 180, true), clamps: DIAG, chamfer: 0, shape: sawPlate },
+  visor: { segs: [seg(180, 45, 315, 160, 186, true, 0), seg(0, -20, 20, 164, 182, false, 1)], clamps: [27, 333, 135, 225], chamfer: 5 },
+  petals: { segs: ring(every(6), 46, 160, 178, true), clamps: [30, 150, 210, 330], chamfer: 4, shape: petal },
+  chain: {
+    segs: every(12).map((mid, i) => seg(mid, mid - 17, mid + 17, i % 2 ? 167 : 164, i % 2 ? 181 : 184, false, i)),
+    clamps: [15, 105, 195, 285], chamfer: 0, shape: link, plain: true, push: 1.4,
+  },
+  pods: { segs: ring(every(3), 32, 160, 186, true), clamps: [60, 180, 300], chamfer: 6, track: { r: 173, w: 3 } },
+  tiers: {
+    segs: [...ring(every(8, 22.5), 40, 158, 168, false), ...ring(every(4), 60, 172, 194, true).map((x) => ({ ...x, index: x.index + 8 }))],
+    clamps: DIAG, chamfer: 3,
+  },
+  cross: { segs: ring(every(4, 45), 28, 158, 197, true), clamps: every(4), chamfer: 0, shape: arm, plain: true, badgeR: 176, track: { r: 167, w: 10 } },
 };
 
 /** Vent slots either side of a plate's badge, as many as fit. */
 export function ventAngles(s: Seg) {
   const out: number[] = [];
-  for (let k = 0; 11 + k * 4 <= (s.a1 - s.a0) / 2 - 6; k++) out.push(s.mid - (11 + k * 4), s.mid + (11 + k * 4));
+  for (let k = 0; k < 7 && 11 + k * 4 <= (s.a1 - s.a0) / 2 - 6; k++) out.push(s.mid - (11 + k * 4), s.mid + (11 + k * 4));
   return out;
 }
 

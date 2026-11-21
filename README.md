@@ -56,7 +56,7 @@ Click the palette button in the chat header to open her wardrobe. Every choice s
 | Part | Options |
 |---|---|
 | Color | Ember, Arc reactor, Toxic, Crimson, Void, Brass, Chrome, Sakura, or any custom color (she builds the darker metals and highlights from it) |
-| Ring | 4 armor plates, 6 segments, 8 blades, vented band, twin crescents, spiked crown, floating shards, gyro rings |
+| Ring | 4 armor plates, 6 segments, 8 blades, vented band, twin crescents, spiked crown, floating shards, gyro rings, hex frame, sawblade, visor arc, petal plates, chain links, satellite pods, double tier, cross arms |
 | Inner cog | The ring that spins inside her shell: classic teeth, honeycomb, carbon weave, circuit traces, hazard stripes, bearing dots, topographic, Greek key |
 | Clamps | Bracket, talon claw, piston, arrow fin, round lug, twin prongs, rune tablet, none |
 | Badges | Greek (Α Θ Σ Ω), Roman, runes, M I S A |

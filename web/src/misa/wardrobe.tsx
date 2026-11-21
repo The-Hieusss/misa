@@ -268,10 +268,11 @@ function RingIcon({ ring, color, fill }: { ring: Skin["ring"]; color: string; fi
             <ellipse key={t} cx={C} cy={C} rx={GYRO.rx} ry={GYRO.ry} transform={`rotate(${t} ${C} ${C})`} fill="none" stroke={color} strokeWidth="18" />
           ))
         : null}
+      {spec.track ? <circle cx={C} cy={C} r={spec.track.r} fill="none" stroke={color} strokeWidth={Math.max(14, spec.track.w + 8)} /> : null}
       {spec.segs.map((s) => (
-        <g key={s.mid} fill={fill} stroke={color} strokeWidth="12" strokeLinejoin="round">
+        <g key={`${s.mid}-${s.index}`} fill={fill} stroke={color} strokeWidth="12" strokeLinejoin="round" fillRule="evenodd">
           {spec.spikes ? spikePaths(s).map((d) => <path key={d} d={d} />) : null}
-          <path d={platePath(s.r1 - 6, s.r2 + 4, s.a0, s.a1, spec.chamfer)} />
+          <path d={spec.shape ? spec.shape(s) : platePath(s.r1 - 6, s.r2 + 4, s.a0, s.a1, spec.chamfer)} />
         </g>
       ))}
     </svg>

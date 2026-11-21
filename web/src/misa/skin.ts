@@ -87,6 +87,14 @@ export const RINGS = {
   crown: "Spiked crown",
   shards: "Floating shards",
   gyro: "Gyro rings",
+  hex: "Hex frame",
+  saw: "Sawblade",
+  visor: "Visor arc",
+  petals: "Petal plates",
+  chain: "Chain links",
+  pods: "Satellite pods",
+  tiers: "Double tier",
+  cross: "Cross arms",
 };
 
 export const CLAMPS = {

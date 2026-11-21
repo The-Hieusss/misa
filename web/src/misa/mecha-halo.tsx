@@ -118,7 +118,7 @@ export default function MechaHalo({
   const spec = RING_SPECS[skin.ring];
   const clamp = skin.clamp === "none" ? null : CLAMP_ART[skin.clamp];
   const glyphs = GLYPHS[skin.glyphs].set;
-  const segShape = (s: Seg) => platePath(s.r1, s.r2, s.a0, s.a1, spec.chamfer);
+  const segShape = (s: Seg) => (spec.shape ? spec.shape(s) : platePath(s.r1, s.r2, s.a0, s.a1, spec.chamfer));
   const pushDist = PUSH_PX * (spec.push ?? 1);
   const heat = charged ? 1 : 0;
   const fade = { transition: "stroke-opacity 300ms, stroke 300ms" };
@@ -365,12 +365,13 @@ export default function MechaHalo({
                       <ellipse key={t} cx={C} cy={C} rx={GYRO.rx} ry={GYRO.ry} transform={`rotate(${t} ${C} ${C})`} fill="none" stroke={p.deep} strokeWidth="11" />
                     ))
                   : null}
+                {spec.track ? <circle cx={C} cy={C} r={spec.track.r} fill="none" stroke={p.deep} strokeWidth={spec.track.w + 2} /> : null}
                 {spec.segs.map((s) => (
-                  <Radial key={s.mid} angle={s.mid} push={push} dist={pushDist}>
+                  <Radial key={`${s.mid}-${s.index}`} angle={s.mid} push={push} dist={pushDist}>
                     {spec.spikes
                       ? spikePaths(s).map((d) => <path key={d} d={d} fill={p.deep} stroke={p.main} strokeOpacity="0.3" strokeWidth="1.2" />)
                       : null}
-                    <path d={segShape(s)} fill={p.deep} stroke={p.main} strokeOpacity="0.3" strokeWidth="1.4" />
+                    <path d={segShape(s)} fillRule="evenodd" fill={p.deep} stroke={p.main} strokeOpacity="0.3" strokeWidth="1.4" />
                   </Radial>
                 ))}
               </motion.g>
@@ -419,10 +420,19 @@ export default function MechaHalo({
                     </g>
                   ))
                 : null}
+              {spec.track ? (
+                <g fill="none">
+                  <circle cx={C} cy={C} r={spec.track.r} stroke="url(#halo-edge)" strokeWidth={spec.track.w + 2.4} strokeOpacity={charged ? 1 : 0.8} />
+                  <circle cx={C} cy={C} r={spec.track.r} stroke={p.plateA} strokeWidth={spec.track.w} />
+                  {!compact && spec.track.w >= 6 ? (
+                    <circle cx={C} cy={C} r={spec.track.r} stroke={charged ? p.hot : p.main} strokeWidth="1.2" strokeDasharray="5 11" strokeLinecap="round" className="halo-flow" />
+                  ) : null}
+                </g>
+              ) : null}
               {spec.segs.map((s) => {
-                const badge = pt(s.r1 + 8.5, s.mid);
+                const badge = pt(spec.badgeR ?? s.r1 + 8.5, s.mid);
                 return (
-                  <Radial key={s.mid} angle={s.mid} push={push} dist={pushDist}>
+                  <Radial key={`${s.mid}-${s.index}`} angle={s.mid} push={push} dist={pushDist}>
                     {spec.spikes
                       ? spikePaths(s).map((d) => (
                           <path key={d} d={d} fill="url(#halo-plate)" stroke="url(#halo-edge)" strokeWidth="1.2" strokeOpacity={charged ? 1 : 0.8} />
@@ -430,16 +440,17 @@ export default function MechaHalo({
                       : null}
                     <path
                       d={segShape(s)}
+                      fillRule="evenodd"
                       fill="url(#halo-plate)"
                       stroke="url(#halo-edge)"
                       strokeWidth="1.6"
                       strokeOpacity={charged ? 1 : 0.8}
                       style={fade}
                     />
-                    {!compact && <path d={segShape(s)} fill="url(#halo-pat)" />}
-                    <path d={arcPath(s.r2 - 1.6, s.a0 + 1.5, s.a1 - 1.5)} fill="none" stroke={p.light} strokeOpacity="0.55" strokeWidth="1" />
-                    <path d={arcPath(s.r1 + 1.6, s.a0 + 5, s.a1 - 5)} fill="none" stroke={p.ink} strokeOpacity="0.8" strokeWidth="1.5" />
-                    {compact ? (
+                    {!compact && <path d={segShape(s)} fillRule="evenodd" fill="url(#halo-pat)" />}
+                    {!spec.plain && <path d={arcPath(s.r2 - 1.6, s.a0 + 1.5, s.a1 - 1.5)} fill="none" stroke={p.light} strokeOpacity="0.55" strokeWidth="1" />}
+                    {!spec.plain && <path d={arcPath(s.r1 + 1.6, s.a0 + 5, s.a1 - 5)} fill="none" stroke={p.ink} strokeOpacity="0.8" strokeWidth="1.5" />}
+                    {spec.plain ? null : compact ? (
                       <path d={arcPath(s.r2 - 6, s.a0 + 4, s.a1 - 4)} fill="none" stroke={p.main} strokeOpacity="0.35" strokeWidth="1" />
                     ) : (
                       <>
@@ -478,22 +489,22 @@ export default function MechaHalo({
                           const [x, y] = pt(s.r1 + 9, a);
                           return <circle key={a} cx={x} cy={y} r="2.3" fill={p.ink} stroke={p.main} strokeOpacity="0.8" strokeWidth="1" />;
                         })}
-                        {s.badge && (
-                          <>
-                            <circle cx={badge[0]} cy={badge[1]} r="9.5" fill={p.ink} stroke={p.light} strokeOpacity={charged ? 1 : 0.6} strokeWidth="1" style={fade} />
-                            <circle cx={badge[0]} cy={badge[1]} r="12" fill="none" stroke={p.main} strokeOpacity="0.35" strokeWidth="0.8" strokeDasharray="1.5 2.5" />
-                            <text
-                              x={badge[0]}
-                              y={badge[1] + 4.5}
-                              textAnchor="middle"
-                              fontFamily="Cinzel, 'Apple Symbols', serif"
-                              fontSize={glyphs[s.index % glyphs.length].length > 2 ? 10 : 13}
-                              fill={p.light}
-                            >
-                              {glyphs[s.index % glyphs.length]}
-                            </text>
-                          </>
-                        )}
+                      </>
+                    )}
+                    {!compact && s.badge && (
+                      <>
+                        <circle cx={badge[0]} cy={badge[1]} r="9.5" fill={p.ink} stroke={p.light} strokeOpacity={charged ? 1 : 0.6} strokeWidth="1" style={fade} />
+                        <circle cx={badge[0]} cy={badge[1]} r="12" fill="none" stroke={p.main} strokeOpacity="0.35" strokeWidth="0.8" strokeDasharray="1.5 2.5" />
+                        <text
+                          x={badge[0]}
+                          y={badge[1] + 4.5}
+                          textAnchor="middle"
+                          fontFamily="Cinzel, 'Apple Symbols', serif"
+                          fontSize={glyphs[s.index % glyphs.length].length > 2 ? 10 : 13}
+                          fill={p.light}
+                        >
+                          {glyphs[s.index % glyphs.length]}
+                        </text>
                       </>
                     )}
                   </Radial>
