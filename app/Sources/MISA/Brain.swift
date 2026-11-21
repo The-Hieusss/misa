@@ -96,8 +96,21 @@ final class Brain {
             }
         }
 
+        // Quit apps: "quit Spotify", "close Safari and Notes" (before the timer, which also hears "quit")
+        if let rest = AppLauncher.target(of: raw, verbs: AppLauncher.quitVerbs),
+           !has(t, "timer", "focus", "break", "countdown", "pomodoro", "chat") {
+            return { AppLauncher.quit(rest) ?? AppLauncher.notRunning(rest) }
+        }
+
         // Timer
         if let action = timerAction(t, raw: raw) { return action }
+
+        // Open apps: "open Claude", "launch Safari and Notes"
+        if let rest = AppLauncher.target(of: raw) {
+            let firm = ["open", "launch", "fire up", "bring up", "pull up", "switch to"].contains { t.hasPrefix($0 + " ") || t.contains(" \($0) ") }
+            if let reply = AppLauncher.open(rest) { return { reply } }
+            if firm { return { AppLauncher.notFound(rest) } }
+        }
 
         // Unit conversions, then plain math (both need a number)
         if let r = UnitConverter.answer(raw) { return { r } }
@@ -110,6 +123,12 @@ final class Brain {
             return { DisposableActions.status() }
         }
         if has(t, "expiring", "expire", "expires") { return { DisposableActions.status() } }
+
+        // Trash
+        if has(t, "trash", "trash can", "bin", "recycle") && has(t, "empty", "clear", "clean", "take out", "delete", "purge")
+            && !has(t, "screenshot", "screenshots") {
+            return { TrashBin.empty() }
+        }
 
         // Screenshots
         if has(t, "screenshot", "screenshots", "screen shot", "screen recording", "screen recordings") {
@@ -247,6 +266,8 @@ final class Brain {
             • Tidy your screenshots, or trash old ones
             • Save new screenshots to a folder
             • Tidy old downloads
+            • Empty the Trash
+            • Open or quit apps ("open Claude", "quit Spotify")
             • Show what's using your disk
             • Show what's in Disposable, or keep a file
             """, suggestions: Array(Self.starters.dropFirst()))

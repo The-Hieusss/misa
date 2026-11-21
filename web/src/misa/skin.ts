@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 
 /**
- * M.I.S.A.'s outfit: shell colors, plate pattern, ring design, clamp design and plate badges.
+ * M.I.S.A.'s outfit: shell colors, inner cog, ring design, clamp design and plate badges.
  * The ids must match app/Sources/MISA/Skin.swift, which saves the choice and parses chat requests.
  */
 
@@ -67,15 +67,15 @@ export const PALETTES = {
   },
 } satisfies Record<string, Palette>;
 
-export const PATTERNS = {
+export const COGS = {
+  classic: "Classic teeth",
   honeycomb: "Honeycomb",
   carbon: "Carbon weave",
   circuit: "Circuit traces",
   hazard: "Hazard stripes",
-  dots: "Dot grid",
+  dots: "Bearing dots",
   topo: "Topographic",
   meander: "Greek key",
-  brushed: "Brushed plain",
 };
 
 export const RINGS = {
@@ -116,6 +116,10 @@ export const IRISES = {
   reticle: "Reticle",
   circuit: "Circuit",
   nebula: "Nebula",
+  tomoe: "Triple tomoe",
+  pinwheel: "Pinwheel",
+  petals: "Crest petals",
+  ripple: "Ripple rings",
 };
 
 export const PUPILS = {
@@ -136,7 +140,8 @@ export type Skin = {
   color: ColorId;
   /** Main color when color is "custom" (#rrggbb). */
   custom: string;
-  pattern: keyof typeof PATTERNS;
+  /** The spinning cog inside the shell. */
+  cog: keyof typeof COGS;
   ring: keyof typeof RINGS;
   clamp: keyof typeof CLAMPS;
   glyphs: keyof typeof GLYPHS;
@@ -152,7 +157,7 @@ export type Skin = {
   coreCustom: string;
 };
 
-export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", pattern: "honeycomb", ring: "plates4", clamp: "bracket", glyphs: "greek",
+export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", cog: "classic", ring: "plates4", clamp: "bracket", glyphs: "greek",
   eye: "shell", eyeCustom: "#38bdf8", eye2: "off", iris: "fibers", pupil: "aperture", core: "eye", coreCustom: "#ffffff" };
 
 /** Drops unknown values (e.g. from an older or newer version) back to the default. */
@@ -164,7 +169,7 @@ export function sanitize(s: Partial<Record<keyof Skin, string>> | undefined): Sk
   return {
     color: s?.color === "custom" ? "custom" : (pick("color", PALETTES) as ColorId),
     custom: hexOr(s?.custom, DEFAULT_SKIN.custom),
-    pattern: pick("pattern", PATTERNS),
+    cog: pick("cog", COGS),
     ring: pick("ring", RINGS),
     clamp: pick("clamp", CLAMPS),
     glyphs: pick("glyphs", GLYPHS),

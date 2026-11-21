@@ -187,68 +187,130 @@ export const CLAMP_ART: Record<Exclude<Skin["clamp"], "none">, ClampArt> = {
   },
 };
 
-/* ── Plate patterns ───────────────────────────────────────────────────────── */
+/** The fixed honeycomb texture on the armor plates. */
+export function PlatePattern({ id, color }: { id: string; color: string }) {
+  return (
+    <pattern id={id} patternUnits="userSpaceOnUse" width="9" height="15.6">
+      <path d="M4.5 0 L9 2.6 L9 7.8 L4.5 10.4 L0 7.8 L0 2.6 Z M4.5 10.4 L4.5 15.6" fill="none" stroke={color} strokeOpacity="0.13" strokeWidth="0.7" />
+    </pattern>
+  );
+}
 
-export function PlatePattern({ id, kind, color }: { id: string; kind: Skin["pattern"]; color: string }) {
-  const u = { id, patternUnits: "userSpaceOnUse" as const };
+/* ── Inner cog ─────────────────────────────────────────────────────────────── */
+// The spinning ring between the dial and the plates. It lives in a band from r 146 to 158; the
+// designs borrow the old plate-pattern motifs. Each returns static art; the halo spins it.
+
+const poly = (pts: (readonly [number, number])[]) => pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+const range = (n: number) => Array.from({ length: n }, (_, i) => i);
+
+export function CogArt({ kind, p }: { kind: Skin["cog"]; p: Palette }) {
+  const rim = (r: number, o = 0.55, w = 1.2) => <circle cx={C} cy={C} r={r} fill="none" stroke={p.main} strokeOpacity={o} strokeWidth={w} />;
   switch (kind) {
+    case "classic":
+      return (
+        <>
+          {rim(149, 0.55, 2)}
+          {range(48).map((i) => (
+            <rect key={i} x={C - 2.5} y={C - 156} width="5" height="7" fill={p.main} fillOpacity={i % 6 === 0 ? 0.95 : 0.5} transform={`rotate(${i * 7.5} ${C} ${C})`} />
+          ))}
+        </>
+      );
     case "honeycomb":
       return (
-        <pattern {...u} width="9" height="15.6">
-          <path d="M4.5 0 L9 2.6 L9 7.8 L4.5 10.4 L0 7.8 L0 2.6 Z M4.5 10.4 L4.5 15.6" fill="none" stroke={color} strokeOpacity="0.13" strokeWidth="0.7" />
-        </pattern>
+        <>
+          {rim(146.5, 0.45, 1)}
+          {range(36).map((i) => {
+            const [x, y] = pt(152, i * 10);
+            return (
+              <polygon key={i} points={hex(x, y, 4.6)} transform={`rotate(${i * 10} ${x} ${y})`} fill={p.main} fillOpacity={i % 9 === 0 ? 0.85 : 0.12} stroke={p.main} strokeOpacity="0.75" strokeWidth="1" />
+            );
+          })}
+        </>
       );
     case "carbon":
+      // Woven: tangential and radial bars take turns.
       return (
-        <pattern {...u} width="8" height="8">
-          <g fill={color} fillOpacity="0.12">
-            <rect x="0" y="1" width="4" height="2" />
-            <rect x="5" y="0" width="2" height="4" />
-            <rect x="4" y="5" width="4" height="2" />
-            <rect x="1" y="4" width="2" height="4" />
-          </g>
-        </pattern>
+        <>
+          {rim(148, 0.5, 1.4)}
+          {range(48).map((i) =>
+            i % 2 === 0 ? (
+              <rect key={i} x={C - 3.5} y={C - 155} width="7" height="3.2" fill={p.main} fillOpacity={i % 12 === 0 ? 0.95 : 0.55} transform={`rotate(${i * 7.5} ${C} ${C})`} />
+            ) : (
+              <rect key={i} x={C - 1.2} y={C - 157.5} width="2.4" height="8.5" fill={p.main} fillOpacity="0.4" transform={`rotate(${i * 7.5} ${C} ${C})`} />
+            ),
+          )}
+        </>
       );
     case "circuit":
+      // Traces that step out, jog sideways and end in a pad.
       return (
-        <pattern {...u} width="30" height="30">
-          <path d="M0 8h9l5 5h16M8 30v-7l6-6M22 0v5l-4 4M30 22h-6l-3 3v5" fill="none" stroke={color} strokeOpacity="0.22" strokeWidth="0.7" />
-          <g fill={color} fillOpacity="0.35">
-            <circle cx="14" cy="17" r="1.2" />
-            <circle cx="18" cy="9" r="1.2" />
-            <circle cx="21" cy="25" r="1.2" />
-          </g>
-        </pattern>
+        <>
+          {rim(147.5, 0.55, 1.2)}
+          {range(24).map((i) => {
+            const a = i * 15;
+            const [x0, y0] = pt(147.5, a);
+            const [x1, y1] = pt(151.5, a);
+            const [x2, y2] = pt(151.5, a + 5);
+            const [x3, y3] = pt(155.5, a + 5);
+            return (
+              <g key={i}>
+                <path d={`M${x0} ${y0} L${x1} ${y1} A151.5 151.5 0 0 1 ${x2} ${y2} L${x3} ${y3}`} fill="none" stroke={p.main} strokeOpacity="0.7" strokeWidth="1.2" />
+                <circle cx={x3} cy={y3} r={i % 3 === 0 ? 2.2 : 1.6} fill={i % 3 === 0 ? p.light : p.main} fillOpacity={i % 3 === 0 ? 0.95 : 0.7} />
+              </g>
+            );
+          })}
+        </>
       );
     case "hazard":
       return (
-        <pattern {...u} width="10" height="10" patternTransform="rotate(45)">
-          <rect width="5" height="10" fill={color} fillOpacity="0.11" />
-        </pattern>
+        <>
+          <circle cx={C} cy={C} r="151.5" fill="none" stroke={p.ink} strokeOpacity="0.6" strokeWidth="9" />
+          {range(45).map((i) => {
+            const a = i * 8;
+            return <polygon key={i} points={poly([pt(147, a), pt(147, a + 3.2), pt(156, a + 6.4), pt(156, a + 3.2)])} fill={p.main} fillOpacity="0.7" />;
+          })}
+          {rim(147, 0.6, 1)}
+          {rim(156, 0.6, 1)}
+        </>
       );
     case "dots":
+      // A bearing race: balls between two rims.
       return (
-        <pattern {...u} width="7" height="7">
-          <circle cx="3.5" cy="3.5" r="0.9" fill={color} fillOpacity="0.3" />
-        </pattern>
+        <>
+          {rim(146.5, 0.5, 1)}
+          {rim(157.5, 0.5, 1)}
+          {range(32).map((i) => {
+            const [x, y] = pt(152, i * 11.25);
+            return <circle key={i} cx={x} cy={y} r={i % 4 === 0 ? 3.4 : 2.4} fill={i % 4 === 0 ? p.light : p.main} fillOpacity={i % 4 === 0 ? 0.95 : 0.6} />;
+          })}
+        </>
       );
-    case "topo":
+    case "topo": {
+      // Contour lines: two waves around the ring, out of step.
+      const wave = (phase: number, amp: number) =>
+        poly(range(181).map((k) => pt(152 + amp * Math.sin((k * 2 * 12 * Math.PI) / 180 + phase), k * 2)));
       return (
-        <pattern {...u} width="40" height="16">
-          <path d="M0 4C10 0 20 8 40 4M0 12C10 8 25 16 40 12" fill="none" stroke={color} strokeOpacity="0.18" strokeWidth="0.7" />
-        </pattern>
+        <>
+          <polyline points={wave(0, 3.6)} fill="none" stroke={p.main} strokeOpacity="0.8" strokeWidth="1.3" />
+          <polyline points={wave(Math.PI, 2.2)} fill="none" stroke={p.main} strokeOpacity="0.45" strokeWidth="1" />
+          {rim(146.5, 0.35, 0.8)}
+        </>
       );
-    case "meander":
+    }
+    case "meander": {
+      // Greek key: one hook every 12°.
+      const P = (u: number, r: number, a0: number) => pt(r, a0 + u * 12);
       return (
-        <pattern {...u} width="16" height="16">
-          <path d="M0 13V3h12v8H5V6h4M12 13h4" fill="none" stroke={color} strokeOpacity="0.2" strokeWidth="0.8" />
-        </pattern>
+        <>
+          {rim(147, 0.7, 1.2)}
+          {rim(157, 0.45, 1)}
+          {range(30).map((i) => {
+            const a = i * 12;
+            const pts = [P(0, 147, a), P(0, 155, a), P(0.75, 155, a), P(0.75, 149.5, a), P(0.35, 149.5, a), P(0.35, 152.5, a)];
+            return <polyline key={i} points={poly(pts)} fill="none" stroke={p.main} strokeOpacity={i % 5 === 0 ? 1 : 0.7} strokeWidth="1.3" strokeLinejoin="miter" />;
+          })}
+        </>
       );
-    case "brushed":
-      return (
-        <pattern {...u} width="4" height="3">
-          <path d="M0 1.5h4" stroke={color} strokeOpacity="0.09" strokeWidth="0.6" />
-        </pattern>
-      );
+    }
   }
 }

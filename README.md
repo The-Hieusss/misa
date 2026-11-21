@@ -24,8 +24,13 @@ A floating assistant for macOS. She sits anywhere on your screen, above every ap
 - tidy screenshots off your Desktop into `~/Screenshots/<year-month>/`, or trash ones older than 7 days
 - save new screenshots to `~/Screenshots` instead of the Desktop
 - tidy downloads older than 30 days (moves them to Disposable)
+- open apps: "open Claude", "launch Safari and Notes", "open vs code". She looks in Applications, Utilities and the system apps, and understands nicknames like "chrome", "settings" and "word"
+- quit apps: "quit Spotify", "close Safari and Notes". Apps quit the normal way, so anything with unsaved work asks first. "Quit everything" lists the open apps on a confirm card first
+- empty the Trash: "empty the trash", "take out the trash". She lists what's in it first and only empties it when you click the card. Finder does the emptying, so macOS asks once to let her control Finder
 - show what's using your disk (read-only)
 - show what's in Disposable, or "keep" a file from it
+
+You can drag photos and videos straight from the Photos app too. She asks Photos for the original file (not the preview it also sends) and saves it to `~/Downloads/From Photos` first.
 
 New files always go next to the originals, and originals are never changed. Anything that moves many files or sends things to the Trash shows a **confirm card** first, and nothing happens until you click it. Actions are logged to `~/Library/Logs/misa.log`.
 
@@ -48,7 +53,7 @@ Click the palette button in the chat header to open her wardrobe. Every choice s
 |---|---|
 | Color | Ember, Arc reactor, Toxic, Crimson, Void, Brass, Chrome, Sakura, or any custom color (she builds the darker metals and highlights from it) |
 | Ring | 4 armor plates, 6 segments, 8 blades, vented band, twin crescents, spiked crown, floating shards, gyro rings |
-| Plate pattern | Honeycomb, carbon weave, circuit traces, hazard stripes, dot grid, topographic, Greek key, brushed plain |
+| Inner cog | The ring that spins inside her shell: classic teeth, honeycomb, carbon weave, circuit traces, hazard stripes, bearing dots, topographic, Greek key |
 | Clamps | Bracket, talon claw, piston, arrow fin, round lug, twin prongs, rune tablet, none |
 | Badges | Greek (Α Θ Σ Ω), Roman, runes, M I S A |
 
@@ -58,13 +63,13 @@ The **Eye** tab changes her eye on its own:
 |---|---|
 | Iris color | Match the shell, any theme color, or a custom color |
 | Two-tone | Off, or a second color for the right half of the iris |
-| Iris pattern | Fibers, rings, spiral, hex lens, starburst, reticle, circuit, nebula |
+| Iris pattern | Fibers, rings, spiral, hex lens, starburst, reticle, circuit, nebula, triple tomoe, pinwheel, crest petals, ripple rings |
 | Pupil | Aperture, cat slit, ring core, diamond, cross, star, hexagon, heart, triple dot |
 | Center light | Match the iris, any theme color, or a custom color |
 
 Every pupil still dilates, spins up when she's charged, and blinks. Eye parts live in `web/src/misa/eye-parts.tsx`.
 
-The color recolors the chat and the menu-bar camera too. Parts live in `web/src/misa/skin.ts` (catalog) and `shell-parts.tsx` (geometry), so adding a new one is a single entry.
+The color recolors the chat and the menu-bar camera too. Parts live in `web/src/misa/skin.ts` (catalog) and `shell-parts.tsx` (geometry, including `CogArt`), so adding a new one is a single entry.
 
 ### Starting with your Mac
 

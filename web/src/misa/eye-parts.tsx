@@ -12,6 +12,13 @@ const range = (n: number, step = 360 / n, from = 0) => Array.from({ length: n },
 // Fixed "random" star field for the nebula, so it doesn't jump between renders.
 const STARS = range(22).map((i) => ({ r: 24 + ((i * 37) % 29), a: (i * 137.5) % 360, s: 0.6 + ((i * 7) % 5) * 0.25 }));
 
+/** A tomoe (the traditional comma crest) sitting on a circle of radius r at angle a, tail trailing back. */
+function tomoe(cx: number, cy: number, r: number, a: number, size: number) {
+  const P = (rr: number, d: number) => at(cx, cy, rr, d).join(" ");
+  const tail = (size / r) * 400; // degrees the tail trails, scaled to the head
+  return `M${P(r + size, a)} Q${P(r + size * 0.9, a - tail * 0.55)} ${P(r, a - tail)} Q${P(r - size * 0.45, a - tail * 0.45)} ${P(r - size, a)} Z`;
+}
+
 type IrisColors = { ink: string; hot: string; light: string };
 
 /**
@@ -159,6 +166,85 @@ export function IrisPattern({ cx, cy, kind, c, origin }: { cx: number; cy: numbe
           })}
         </g>
       );
+    case "tomoe":
+      return (
+        <g className="animate-spin-slow" style={origin}>
+          <circle cx={cx} cy={cy} r={36} {...ink} strokeOpacity="0.55" strokeWidth="1.4" />
+          {range(3, 120, -90).map((a) => {
+            const [x, y] = at(cx, cy, 36, a);
+            return (
+              <g key={a} fill={c.ink} fillOpacity="0.85">
+                <path d={tomoe(cx, cy, 36, a, 6.5)} />
+                <circle cx={x} cy={y} r={6.5} />
+              </g>
+            );
+          })}
+          <circle cx={cx} cy={cy} r={50} fill="none" stroke={c.hot} strokeOpacity="0.25" strokeWidth="0.8" />
+        </g>
+      );
+    case "pinwheel":
+      // Five slim blades sweeping out from the pupil.
+      return (
+        <g className="animate-spin-slow" style={origin}>
+          {range(5).map((a) => (
+            <path
+              key={a}
+              d={`M${at(cx, cy, 22, a).join(" ")} Q${at(cx, cy, 40, a + 8).join(" ")} ${at(cx, cy, 53, a + 46).join(" ")} Q${at(cx, cy, 37, a + 22).join(" ")} ${at(cx, cy, 23, a + 13).join(" ")} Z`}
+              fill={c.ink}
+              fillOpacity="0.7"
+            />
+          ))}
+          <circle cx={cx} cy={cy} r={22.5} {...ink} strokeOpacity="0.6" strokeWidth="1.2" />
+          <circle cx={cx} cy={cy} r={47} fill="none" stroke={c.hot} strokeOpacity="0.22" strokeWidth="0.8" strokeDasharray="3 5" />
+        </g>
+      );
+    case "petals":
+      // Eight pointed petals around the pupil, with a bead between each tip.
+      return (
+        <g className="animate-spin-slow" style={origin}>
+          {range(8, 45, -90).map((a) => (
+            <path
+              key={a}
+              d={`M${at(cx, cy, 24, a).join(" ")} Q${at(cx, cy, 37, a - 12).join(" ")} ${at(cx, cy, 51, a).join(" ")} Q${at(cx, cy, 37, a + 12).join(" ")} ${at(cx, cy, 24, a).join(" ")} Z`}
+              fill={c.ink}
+              fillOpacity="0.5"
+              stroke={c.ink}
+              strokeOpacity="0.8"
+              strokeWidth="1"
+            />
+          ))}
+          {range(8, 45, -67.5).map((a) => {
+            const [x, y] = at(cx, cy, 45, a);
+            return <circle key={a} cx={x} cy={y} r="1.6" fill={c.hot} fillOpacity="0.6" />;
+          })}
+          <circle cx={cx} cy={cy} r={24} {...ink} strokeOpacity="0.55" strokeWidth="1.2" />
+        </g>
+      );
+    case "ripple": {
+      // Wavy rings spreading out, with tomoe beads riding the middle one the other way.
+      const wave = (base: number, phase: number) =>
+        poly(range(73, 5).map((d) => at(cx, cy, base + 1.5 * Math.sin(((d * 6 + phase) * Math.PI) / 180), d)));
+      return (
+        <>
+          <g className="animate-spin-slow" style={origin}>
+            {[28, 37.5, 47].map((b, i) => (
+              <polyline key={b} points={wave(b, i * 30)} {...ink} strokeOpacity={0.55 - i * 0.08} strokeWidth="1.4" />
+            ))}
+          </g>
+          <g className="animate-spin-rev" style={origin}>
+            {range(4, 90, 45).map((a) => {
+              const [x, y] = at(cx, cy, 42, a);
+              return (
+                <g key={a} fill={c.ink} fillOpacity="0.85">
+                  <path d={tomoe(cx, cy, 42, a, 3.6)} />
+                  <circle cx={x} cy={y} r={3.6} />
+                </g>
+              );
+            })}
+          </g>
+        </>
+      );
+    }
   }
 }
 

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { motion, useAnimationFrame, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import type { MotionValue } from "framer-motion";
 import { GLYPHS, rgb, useSkin } from "./skin";
-import { C, CLAMP_ART, GYRO, PlatePattern, RING_SPECS, arcPath, hex, platePath, pt, spikePaths, ventAngles } from "./shell-parts";
+import { C, CLAMP_ART, CogArt, GYRO, PlatePattern, RING_SPECS, arcPath, hex, platePath, pt, spikePaths, ventAngles } from "./shell-parts";
 import type { Seg } from "./shell-parts";
 import { cn } from "@/lib/utils";
 import MechaEye from "./mecha-eye";
@@ -11,7 +11,6 @@ import type { EyeLook } from "./mecha-eye";
 
 const origin = { transformOrigin: `${C}px ${C}px` };
 const ticks = Array.from({ length: 72 }, (_, i) => ({ a: i * 5, major: i % 6 === 0 }));
-const teeth = Array.from({ length: 48 }, (_, i) => i * 7.5);
 const finsFull = Array.from({ length: 48 }, (_, i) => i * 7.5);
 const finsCompact = Array.from({ length: 24 }, (_, i) => i * 15);
 const bolts = Array.from({ length: 8 }, (_, i) => i * 45 + 22.5);
@@ -246,7 +245,7 @@ export default function MechaHalo({
                 <stop offset="0%" stopColor={p.light} />
                 <stop offset="100%" stopColor={p.main} />
               </linearGradient>
-              <PlatePattern id="halo-pat" kind={skin.pattern} color={p.main} />
+              <PlatePattern id="halo-pat" color={p.main} />
             </defs>
             <circle
               cx={C}
@@ -341,19 +340,7 @@ export default function MechaHalo({
           {/* ── gear ring + plate rails ── */}
           <Layer z={Z.gear}>
             <motion.g style={{ rotate: gear }}>
-              <circle cx={C} cy={C} r="149" fill="none" stroke={p.main} strokeOpacity="0.55" strokeWidth="2" />
-              {teeth.map((a) => (
-                <rect
-                  key={a}
-                  x={C - 2.5}
-                  y={C - 156}
-                  width="5"
-                  height="7"
-                  fill={p.main}
-                  fillOpacity={a % 45 === 0 ? 0.95 : 0.5}
-                  transform={`rotate(${a} ${C} ${C})`}
-                />
-              ))}
+              <CogArt kind={skin.cog} p={p} />
             </motion.g>
             {spec.segs.map((s) => {
               const [cx0, cy0] = pt(s.r2 + 4, s.a0 - 2);

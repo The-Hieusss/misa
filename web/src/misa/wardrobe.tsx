@@ -1,13 +1,13 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Check, RotateCcw } from "lucide-react";
-import { CLAMPS, DEFAULT_SKIN, GLYPHS, IRISES, PALETTES, PATTERNS, PUPILS, RINGS, eyeColors, paletteFor } from "./skin";
+import { CLAMPS, DEFAULT_SKIN, GLYPHS, IRISES, COGS, PALETTES, PUPILS, RINGS, eyeColors, paletteFor } from "./skin";
 import { IrisPattern, Pupil } from "./eye-parts";
 import type { Palette, Skin } from "./skin";
-import { C, CLAMP_ART, GYRO, PlatePattern, RING_SPECS, platePath, spikePaths } from "./shell-parts";
+import { C, CLAMP_ART, CogArt, GYRO, RING_SPECS, platePath, spikePaths } from "./shell-parts";
 
 /**
- * Pick her colors, plate pattern, ring, clamps and badges. Every change shows on her right
+ * Pick her colors, inner cog, ring, clamps and badges. Every change shows on her right
  * away (the caller renders the draft); Save keeps it, Cancel puts the old look back.
  */
 export function Wardrobe({
@@ -153,19 +153,13 @@ export function Wardrobe({
           </div>
         </Section>
 
-        <Section title="Plate pattern">
+        <Section title="Inner cog">
           <div className="grid grid-cols-4 gap-2">
-            {(Object.keys(PATTERNS) as Skin["pattern"][]).map((id) => (
-              <Tile key={id} on={draft.pattern === id} onClick={() => set("pattern", id)} label={PATTERNS[id]}>
-                <svg viewBox="0 0 56 30" className="h-[30px] w-[56px]" aria-hidden>
-                  <defs>
-                    <PlatePattern id={`ward-pat-${id}`} kind={id} color={p.light} />
-                  </defs>
-                  <rect width="56" height="30" fill={p.plateA} stroke={p.main} strokeOpacity="0.6" />
-                  {/* stacked so the pattern reads at this size; on her it's subtle */}
-                  {[0, 1, 2].map((k) => (
-                    <rect key={k} width="56" height="30" fill={`url(#ward-pat-${id})`} />
-                  ))}
+            {(Object.keys(COGS) as Skin["cog"][]).map((id) => (
+              <Tile key={id} on={draft.cog === id} onClick={() => set("cog", id)} label={COGS[id]}>
+                {/* a zoomed slice of the top of the cog */}
+                <svg viewBox={`${C - 24} 39.5 48 25.7`} className="h-[30px] w-[56px]" aria-hidden>
+                  <CogArt kind={id} p={p} />
                 </svg>
               </Tile>
             ))}
