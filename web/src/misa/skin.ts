@@ -121,7 +121,21 @@ export const SHELLS = {
   ring: "Armored ring",
   pyramid: "Pyramid",
   cube: "Cube",
+  hexprism: "Hex prism",
+  diamond: "Diamond",
+  dodeca: "Dodeca",
   sphere: "Sphere",
+  geodesic: "Geodesic",
+};
+
+/** Symbols engraved on the faces of the solid shells. */
+export const MARKS = {
+  none: "Plain",
+  greek: "Greek",
+  roman: "Roman",
+  runes: "Runes",
+  kanji: "Kanji",
+  binary: "Binary",
 };
 
 export const ARMS = {
@@ -191,6 +205,8 @@ export type Skin = {
   custom: string;
   /** The ring, or a solid shape (the ring, cog, clamp and scanner choices are ring parts). */
   shell: keyof typeof SHELLS;
+  /** Engravings on a solid shell's faces. */
+  marks: keyof typeof MARKS;
   /** The spinning cog inside the shell. */
   cog: keyof typeof COGS;
   ring: keyof typeof RINGS;
@@ -210,7 +226,7 @@ export type Skin = {
   coreCustom: string;
 };
 
-export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", shell: "ring", cog: "classic", ring: "plates4", clamp: "bracket", scanner: "radar", arms: "claw",
+export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", shell: "ring", marks: "none", cog: "classic", ring: "plates4", clamp: "bracket", scanner: "radar", arms: "claw",
   eye: "shell", eyeCustom: "#38bdf8", eye2: "off", iris: "fibers", pupil: "aperture", core: "eye", coreCustom: "#ffffff" };
 
 /** Drops unknown values (e.g. from an older or newer version) back to the default. */
@@ -223,6 +239,7 @@ export function sanitize(s: Partial<Record<keyof Skin, string>> | undefined): Sk
     color: s?.color === "custom" ? "custom" : (pick("color", PALETTES) as ColorId),
     custom: hexOr(s?.custom, DEFAULT_SKIN.custom),
     shell: pick("shell", SHELLS),
+    marks: pick("marks", MARKS),
     cog: pick("cog", COGS),
     ring: pick("ring", RINGS),
     clamp: pick("clamp", CLAMPS),

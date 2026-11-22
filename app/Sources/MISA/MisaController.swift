@@ -386,7 +386,7 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
         case "skin":
             // Saved from the wardrobe panel. Only short known fields are kept.
             if let skin = body["skin"] as? [String: Any] {
-                let keys = ["color", "custom", "shell", "cog", "ring", "clamp", "scanner", "arms", "eye", "eyeCustom", "eye2", "iris", "pupil", "core", "coreCustom"]
+                let keys = ["color", "custom", "shell", "marks", "cog", "ring", "clamp", "scanner", "arms", "eye", "eyeCustom", "eye2", "iris", "pupil", "core", "coreCustom"]
                 let clean = skin.compactMapValues { $0 as? String }.filter { keys.contains($0.key) && $0.value.count <= 16 }
                 UserDefaults.standard.set(clean, forKey: "skin")
                 FileOps.log("skin saved: \(clean.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))")

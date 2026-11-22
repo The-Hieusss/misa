@@ -533,7 +533,7 @@ export default function MechaHalo({
         {solid ? (
           <motion.div className="pointer-events-none absolute inset-0" style={{ x: shakeX, y: shakeY }}>
             <svg viewBox="0 0 400 400" className="absolute inset-0 h-full w-full overflow-visible">
-              <SolidShell kind={solid} p={p} charged={charged} compact={compact} live={{ tiltX, tiltY, spin: shell, push }} />
+              <SolidShell kind={solid} p={p} charged={charged} compact={compact} marks={skin.marks} live={{ tiltX, tiltY, spin: shell, push }} />
             </svg>
           </motion.div>
         ) : null}

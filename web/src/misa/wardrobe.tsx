@@ -2,11 +2,11 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Check, RotateCcw } from "lucide-react";
 import { useAnimationFrame, useMotionValue, useReducedMotion } from "framer-motion";
-import { ARMS, CLAMPS, DEFAULT_SKIN, IRISES, COGS, PALETTES, PUPILS, RINGS, SCANNERS, SHELLS, eyeColors, paletteFor } from "./skin";
+import { ARMS, CLAMPS, DEFAULT_SKIN, IRISES, COGS, MARKS, PALETTES, PUPILS, RINGS, SCANNERS, SHELLS, eyeColors, paletteFor } from "./skin";
 import { IrisPattern, Pupil } from "./eye-parts";
 import type { Palette, Skin } from "./skin";
 import { ArmArt } from "./mecha-arms";
-import { SolidShell } from "./solid-shell";
+import { MarkSample, SolidShell } from "./solid-shell";
 import { C, CLAMP_ART, CogArt, GYRO, RING_SPECS, Scanner, platePath, spikePaths } from "./shell-parts";
 
 /**
@@ -163,9 +163,25 @@ export function Wardrobe({
                   <RingIcon ring={draft.ring} color={p.main} fill={p.plateA} />
                 ) : (
                   <svg viewBox="-20 -40 440 440" className="h-[34px] w-[34px] overflow-visible" aria-hidden>
-                    <SolidShell kind={id} p={p} compact />
+                    <SolidShell kind={id} p={p} compact marks={draft.marks} />
                   </svg>
                 )}
+              </Tile>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Markings" note={draft.shell === "ring" ? "solid shells" : undefined}>
+          <div className="grid grid-cols-3 gap-2">
+            {(Object.keys(MARKS) as Skin["marks"][]).map((id) => (
+              <Tile
+                key={id}
+                on={draft.marks === id}
+                // Markings only show on a solid, so picking one on the ring switches to the cube.
+                onClick={() => onChange({ ...draft, marks: id, shell: draft.shell === "ring" && id !== "none" ? "cube" : draft.shell })}
+                label={MARKS[id]}
+              >
+                <MarkSample marks={id} p={p} />
               </Tile>
             ))}
           </div>
