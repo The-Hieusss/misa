@@ -1,5 +1,5 @@
 import Foundation
-#if canImport(FoundationModels)
+#if canImport(FoundationModels) && !MISA_NO_AI
 @_weakLinked import FoundationModels
 #endif
 
@@ -14,7 +14,7 @@ enum AIBrain {
     /// What she says to explain why plain English isn't working, or nil when it is.
     static var unavailableReason: String? {
         guard enabled else { return "the AI brain is turned off" }
-        #if canImport(FoundationModels)
+        #if canImport(FoundationModels) && !MISA_NO_AI
         if #available(macOS 26.0, *) {
             switch SystemLanguageModel.default.availability {
             case .available: return nil
@@ -60,7 +60,7 @@ enum AIBrain {
 
     /// Loads the model ahead of the first question so that one isn't slow.
     static func prewarm() {
-        #if canImport(FoundationModels)
+        #if canImport(FoundationModels) && !MISA_NO_AI
         if #available(macOS 26.0, *), available { Engine.shared.prewarm() }
         #endif
     }
@@ -74,18 +74,20 @@ enum AIBrain {
 
     /// Reads `text` and decides what to do. `files` are the dropped files ("this", "them").
     static func interpret(_ text: String, files: [URL], timer: String) async -> Outcome {
-        #if canImport(FoundationModels)
+        #if canImport(FoundationModels) && !MISA_NO_AI
         if #available(macOS 26.0, *), available { return await Engine.shared.interpret(text, files: files, timer: timer) }
         #endif
         return .failed
     }
 }
 
-#if canImport(FoundationModels)
+#if canImport(FoundationModels) && !MISA_NO_AI
 
-@available(macOS 26.0, *)
-@Generable
-enum IntentAction: String {
+// The schema is written out by hand (DynamicGenerationSchema) instead of with the @Generable and
+// @Guide macros: those need a compiler plugin that only ships with Xcode, and she must build with
+// just the Command Line Tools too.
+
+enum IntentAction: String, CaseIterable {
     case chat, help, currentTime
     case openApps, quitApps, quitAllApps, openWebsites, webSearch, youtubeSearch
     case startFocus, startBreak, startTimer, pauseTimer, resumeTimer, stopTimer, timeLeft
@@ -98,21 +100,46 @@ enum IntentAction: String {
     case putAway, checkForUpdates, version
 }
 
-@available(macOS 26.0, *)
-@Generable
 struct Intent {
-    @Guide(description: "The one action that matches the request")
     var action: IntentAction
-    @Guide(description: "Every app, website, or file name the request mentions, one per entry, exactly as written. Empty if none.")
     var items: [String]
-    @Guide(description: "Search words (for findFiles: the name plus any type, folder or time words), or the full math expression or unit conversion with every number, like '3 cups in ml'. Empty if none.")
     var query: String
-    @Guide(description: "Minutes for a focus session, break or timer. 0 if not said.")
     var minutes: Int
-    @Guide(description: "Destination folder for moving or copying files, like Desktop or Documents. Empty if none.")
     var destination: String
-    @Guide(description: "For chat: your answer, one or two short sentences. Otherwise a few words, never claiming it's done.")
     var reply: String
+
+    /// The shape the model has to fill in, in this order (it picks the action first).
+    @available(macOS 26.0, *)
+    static let schema: GenerationSchema = {
+        typealias P = DynamicGenerationSchema.Property
+        let text = DynamicGenerationSchema(type: String.self)
+        let root = DynamicGenerationSchema(name: "Intent", properties: [
+            P(name: "action", description: "The one action that matches the request",
+              schema: DynamicGenerationSchema(name: "IntentAction", anyOf: IntentAction.allCases.map(\.rawValue))),
+            P(name: "items", description: "Every app, website, or file name the request mentions, one per entry, exactly as written. Empty if none.",
+              schema: DynamicGenerationSchema(arrayOf: text)),
+            P(name: "query", description: "Search words (for findFiles: the name plus any type, folder or time words), or the full math expression or unit conversion with every number, like '3 cups in ml'. Empty if none.",
+              schema: text),
+            P(name: "minutes", description: "Minutes for a focus session, break or timer. 0 if not said.",
+              schema: DynamicGenerationSchema(type: Int.self)),
+            P(name: "destination", description: "Destination folder for moving or copying files, like Desktop or Documents. Empty if none.",
+              schema: text),
+            P(name: "reply", description: "For chat: your answer, one or two short sentences. Otherwise a few words, never claiming it's done.",
+              schema: text),
+        ])
+        return try! GenerationSchema(root: root, dependencies: [])
+    }()
+
+    @available(macOS 26.0, *)
+    init(_ c: GeneratedContent) throws {
+        let raw = try c.value(String.self, forProperty: "action")
+        action = IntentAction(rawValue: raw) ?? .chat
+        items = (try? c.value([String].self, forProperty: "items")) ?? []
+        query = (try? c.value(String.self, forProperty: "query")) ?? ""
+        minutes = (try? c.value(Int.self, forProperty: "minutes")) ?? 0
+        destination = (try? c.value(String.self, forProperty: "destination")) ?? ""
+        reply = (try? c.value(String.self, forProperty: "reply")) ?? ""
+    }
 }
 
 @available(macOS 26.0, *)
@@ -183,11 +210,11 @@ final class Engine: @unchecked Sendable {
     private func respond(_ prompt: String) async throws -> Intent {
         let options = GenerationOptions(temperature: 0.3)
         do {
-            return try await current().respond(to: prompt, generating: Intent.self, options: options).content
+            return try Intent(await current().respond(to: prompt, schema: Intent.schema, options: options).content)
         } catch LanguageModelSession.GenerationError.exceededContextWindowSize {
             // The conversation got too long: start over and try once more.
             reset()
-            return try await current().respond(to: prompt, generating: Intent.self, options: options).content
+            return try Intent(await current().respond(to: prompt, schema: Intent.schema, options: options).content)
         }
     }
 

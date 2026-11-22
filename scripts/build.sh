@@ -7,9 +7,9 @@ APP="$ROOT/build/M.I.S.A..app"
 echo "→ Building web UI"
 cd "$ROOT/web"
 JS="${MISA_JS:-$(command -v bun >/dev/null && echo bun || echo npm)}"
-if [[ $JS == bun ]]; then
-  bun install --frozen-lockfile >/dev/null 2>&1 || bun install
-  bun run build
+if [[ ${JS:t} == bun ]]; then
+  "$JS" install --frozen-lockfile >/dev/null 2>&1 || "$JS" install
+  "$JS" run build
 else
   npm install --no-audit --no-fund
   npm run build
@@ -17,8 +17,15 @@ fi
 
 echo "→ Building Swift app"
 cd "$ROOT/app"
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/MISA"
+# If the full build fails (an older SDK or toolchain that can't build the on-device AI brain),
+# build again without it: she still works, with exact commands only.
+FLAGS=()
+if ! swift build -c release; then
+  echo "⚠ The full build failed. Building again without the AI brain (exact commands still work)."
+  FLAGS=(-Xswiftc -DMISA_NO_AI)
+  swift build -c release "${FLAGS[@]}"
+fi
+BIN="$(swift build -c release "${FLAGS[@]}" --show-bin-path)/MISA"
 
 echo "→ Assembling $APP"
 rm -rf "$APP"

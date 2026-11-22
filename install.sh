@@ -36,11 +36,29 @@ elif command -v bun >/dev/null 2>&1; then
   JS=bun
 elif command -v npm >/dev/null 2>&1; then
   JS=npm
+elif [[ -x "$HOME/.bun/bin/bun" ]]; then
+  JS="$HOME/.bun/bin/bun"
 else
-  fail "The interface is built with Bun or Node.js, and neither is installed.
-  Install one, then run ./install.sh again:
+  print "The interface is built with Bun or Node.js, and neither is installed."
+  # Only offer to install when someone is at the terminal (not during a self-update).
+  answer=n
+  if [[ -t 0 ]]; then
+    if command -v brew >/dev/null 2>&1; then
+      read "answer?Install Bun with Homebrew now? [Y/n] "
+      [[ "$answer" == [nN]* ]] || { brew install oven-sh/bun/bun && answer=done; }
+    else
+      read "answer?Install Bun now from bun.sh (into ~/.bun)? [Y/n] "
+      [[ "$answer" == [nN]* ]] || { curl -fsSL https://bun.sh/install | bash && answer=done; }
+    fi
+  fi
+  if [[ "$answer" == done ]]; then
+    JS="$(command -v bun || echo "$HOME/.bun/bin/bun")"
+    [[ -x "$JS" ]] || fail "Bun didn't install. Install it from https://bun.sh, then run ./install.sh again."
+  else
+    fail "Install one, then run ./install.sh again:
     Bun:     https://bun.sh          (or: brew install oven-sh/bun/bun)
     Node.js: https://nodejs.org     (or: brew install node)"
+  fi
 fi
 
 # Where to install

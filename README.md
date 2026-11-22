@@ -107,8 +107,8 @@ She opens the chat toward the middle of the screen, so it works in any corner.
 You need:
 
 - macOS 14 (Sonoma) or newer
-- Swift: Xcode, or Apple's free Command Line Tools (the installer offers to install them if they're missing)
-- [Bun](https://bun.sh) or [Node.js](https://nodejs.org), to build the interface
+- Swift: Xcode, or Apple's free Command Line Tools (the installer offers to install them if they're missing). Either one builds everything, the AI brain included
+- [Bun](https://bun.sh) or [Node.js](https://nodejs.org), to build the interface. If neither is installed, the installer offers to install Bun (with Homebrew when you have it)
 
 ```bash
 git clone https://github.com/The-Hieusss/misa.git
@@ -119,6 +119,8 @@ cd misa
 The script builds her from source on your Mac, puts `M.I.S.A..app` in `/Applications` (or `~/Applications`), and opens her. Building locally means macOS doesn't block her the way it blocks unsigned apps downloaded from the internet.
 
 Keep the cloned `misa` folder where it is: she updates herself from it.
+
+If the Swift build fails (for example with an older SDK), the build tries again without the AI brain, so she still installs and works with exact commands.
 
 ### Updating
 
@@ -153,7 +155,7 @@ install.sh         checks the tools, runs the build, copies the app into Applica
 
 - The web view only **asks** for things through a small set of messages (`web/src/bridge.ts`). Only the Swift side can act on the Mac.
 - The built web files are served from inside the app at `misa://app/`, so nothing loads from the internet.
-- `app/Sources/MISA/Brain.swift` routes requests to actions with keywords. Anything it doesn't recognize goes to `AIBrain.swift`, where Apple's on-device model (Foundation Models, guided generation) fills in a typed `Intent`. That intent becomes a plain command for the same router. The framework is weak-linked, so the app still runs on macOS 14 and 15.
+- `app/Sources/MISA/Brain.swift` routes requests to actions with keywords. Anything it doesn't recognize goes to `AIBrain.swift`, where Apple's on-device model (Foundation Models, guided generation) fills in a typed `Intent`. Its schema is built in code (`DynamicGenerationSchema`) rather than with the `@Generable` macro, because that macro's compiler plugin only ships with Xcode. That intent becomes a plain command for the same router. The framework is weak-linked, so the app still runs on macOS 14 and 15.
 - Each ability is one file in `app/Sources/MISA/Actions/`.
 
 ### Working on the look
