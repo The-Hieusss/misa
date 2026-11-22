@@ -140,6 +140,15 @@ export const PUPILS = {
   hexagon: "Hexagon",
   heart: "Heart",
   dots: "Triple dot",
+  crescent: "Crescent",
+  delta: "Delta",
+  keyhole: "Keyhole",
+  gear: "Gear",
+  clover: "Clover",
+  bolt: "Bolt",
+  sparkle: "Sparkle",
+  bar: "Goat bar",
+  hourglass: "Hourglass",
 };
 
 export type ColorId = keyof typeof PALETTES | "custom";

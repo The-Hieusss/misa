@@ -345,5 +345,88 @@ export function Pupil({ cx, cy, kind, c }: { cx: number; cy: number; kind: Skin[
           {core}
         </>
       );
+    case "crescent": {
+      // Outer circle r = 21, cut by a wider arc; the tips sit where x = cx + 6 meets the circle.
+      const ty = Math.sqrt(21 * 21 - 6 * 6);
+      return (
+        <>
+          <path d={`M${cx + 6} ${cy - ty} A21 21 0 1 0 ${cx + 6} ${cy + ty} A24 24 0 0 1 ${cx + 6} ${cy - ty} Z`} {...body} />
+          <circle cx={cx - 12} cy={cy} r={3.2} fill={c.core} className="animate-pulse" />
+        </>
+      );
+    }
+    case "delta":
+      return (
+        <>
+          <polygon points={poly([-90, 30, 150].map((a) => at(cx, cy, 24, a)))} {...body} />
+          {core}
+        </>
+      );
+    case "keyhole": {
+      // A round head (r = 10, 7 above center) that flares into a stem.
+      const y = cy - 7 + Math.sqrt(10 * 10 - 5 * 5);
+      return (
+        <>
+          <path d={`M${cx - 5} ${y} A10 10 0 1 1 ${cx + 5} ${y} L${cx + 9} ${cy + 20} H${cx - 9} Z`} {...body} />
+          <circle cx={cx} cy={cy - 7} r={3.2} fill={c.core} className="animate-pulse" />
+        </>
+      );
+    }
+    case "gear":
+      return (
+        <>
+          <polygon
+            points={poly(range(8).flatMap((a) => [at(cx, cy, 16, a - 15), at(cx, cy, 22.5, a - 9), at(cx, cy, 22.5, a + 9), at(cx, cy, 16, a + 15)]))}
+            {...body}
+          />
+          <circle cx={cx} cy={cy} r={8} fill="none" stroke={c.main} strokeOpacity="0.6" strokeWidth="1" />
+          {core}
+        </>
+      );
+    case "clover": {
+      // Outlined lobes first, then the same lobes filled on top to hide where they overlap.
+      const lobes = [-45, 45, 135, 225].map((a) => at(cx, cy, 10, a));
+      return (
+        <>
+          {lobes.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={9.5} {...body} />)}
+          {lobes.map(([x, y], i) => <circle key={`f${i}`} cx={x} cy={y} r={8.5} fill={c.ink} />)}
+          {core}
+        </>
+      );
+    }
+    case "bolt":
+      return (
+        <>
+          <polygon
+            points={poly([[cx + 5, cy - 25], [cx - 13, cy + 3], [cx - 1.5, cy + 3], [cx - 5, cy + 25], [cx + 13, cy - 4], [cx + 1.5, cy - 4]])}
+            {...body}
+          />
+          {core}
+        </>
+      );
+    case "sparkle":
+      return (
+        <>
+          <path
+            d={`M${cx} ${cy - 25} Q${cx + 6} ${cy - 6} ${cx + 25} ${cy} Q${cx + 6} ${cy + 6} ${cx} ${cy + 25} Q${cx - 6} ${cy + 6} ${cx - 25} ${cy} Q${cx - 6} ${cy - 6} ${cx} ${cy - 25} Z`}
+            {...body}
+          />
+          {core}
+        </>
+      );
+    case "bar":
+      return (
+        <>
+          <rect x={cx - 23} y={cy - 7.5} width={46} height={15} rx={7.5} {...body} />
+          {core}
+        </>
+      );
+    case "hourglass":
+      return (
+        <>
+          <path d={`M${cx - 14} ${cy - 21} H${cx + 14} L${cx + 5.5} ${cy} L${cx + 14} ${cy + 21} H${cx - 14} L${cx - 5.5} ${cy} Z`} {...body} />
+          {core}
+        </>
+      );
   }
 }

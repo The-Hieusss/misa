@@ -1,6 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 import ServiceManagement
+import UserNotifications
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: MisaController!
@@ -27,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         listenForDevCommands()
+        UNUserNotificationCenter.current().delegate = self
     }
 
     /// Developer hooks, e.g. from Terminal:
@@ -139,6 +141,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func refreshLoginItem() {
         loginItem?.state = SMAppService.mainApp.status == .enabled ? .on : .off
+    }
+}
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    /// Show her banners even while she's the active app.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
+        done([.banner, .sound])
+    }
+
+    /// Clicking a banner opens the chat, where the message (and its Update button) is waiting.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler done: @escaping () -> Void) {
+        DispatchQueue.main.async { [weak self] in
+            self?.controller.show()
+            self?.controller.openChat()
+            done()
+        }
     }
 }
 

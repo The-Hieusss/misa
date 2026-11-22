@@ -78,6 +78,9 @@ final class Brain {
     private func route(_ t: String, raw: String) -> (() -> Reply)? {
         let files = self.files
 
+        // Updating herself: "update yourself", "check for updates", "what version are you"
+        if let action = Updater.route(t) { return action }
+
         if has(t, "show in finder", "reveal", "show me", "open folder") && !outputs.isEmpty {
             let outs = outputs
             return { FileOps.onMain { NSWorkspace.shared.activateFileViewerSelecting(outs) }; return Reply(text: "Opened in Finder.") }
@@ -290,6 +293,7 @@ final class Brain {
             • Open websites or search ("open youtube.com", "search for mac shortcuts")
             • Show what's using your disk
             • Show what's in Disposable, or keep a file
+            • Update myself from GitHub ("update yourself", "what version are you")
             """, suggestions: Array(Self.starters.dropFirst()))
         }
         if has(t, "time left", "how long left", "how much time") {

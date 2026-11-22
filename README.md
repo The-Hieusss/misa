@@ -68,7 +68,7 @@ The **Eye** tab changes her eye on its own:
 | Iris color | Match the shell, any theme color, or a custom color |
 | Two-tone | Off, or a second color for the right half of the iris |
 | Iris pattern | Fibers, rings, spiral, hex lens, starburst, reticle, circuit, nebula, triple tomoe, pinwheel, crest petals, ripple rings |
-| Pupil | Aperture, cat slit, ring core, diamond, cross, star, hexagon, heart, triple dot |
+| Pupil | Aperture, cat slit, ring core, diamond, cross, star, hexagon, heart, triple dot, crescent, delta, keyhole, gear, clover, bolt, sparkle, goat bar, hourglass |
 | Center light | Match the iris, any theme color, or a custom color |
 
 Every pupil still dilates, spins up when she's charged, and blinks. Eye parts live in `web/src/misa/eye-parts.tsx`.
@@ -102,7 +102,19 @@ cd misa
 ./install.sh
 ```
 
-The script builds her from source on your Mac, puts `M.I.S.A..app` in `/Applications` (or `~/Applications`), and opens her. Building locally means macOS doesn't block her the way it blocks unsigned apps downloaded from the internet. Run it again any time to update after a `git pull`; it quits the running copy first.
+The script builds her from source on your Mac, puts `M.I.S.A..app` in `/Applications` (or `~/Applications`), and opens her. Building locally means macOS doesn't block her the way it blocks unsigned apps downloaded from the internet.
+
+Keep the cloned `misa` folder where it is: she updates herself from it.
+
+### Updating
+
+She checks GitHub once a day. When there's a new version she says so in the chat (with the unread dot on her halo) and shows a macOS notification; the first time, macOS asks whether she may send notifications. Nothing is downloaded until you say so.
+
+- **"Update yourself"** (or **"check for updates"**) lists what's new on a confirm card. Click **Update** and she runs `git pull` and `./install.sh` in her folder, restarts as the new version and tells you what changed. If the build fails she stays on the old version; the details are in `~/Library/Logs/misa-update.log`.
+- **"What version are you?"** gives her commit and its date.
+- **"Stop checking for updates"** / **"turn on update checks"** switches the daily check.
+
+She won't pull over files you've edited in her folder, and she can't update a copy installed from a ZIP download. In either case, or for a copy installed before self-updating existed, update by hand: `git pull`, then `./install.sh`.
 
 Options: `INSTALL_DIR=~/Applications ./install.sh` to choose the folder, `OPEN=0` to skip opening her.
 
@@ -122,6 +134,7 @@ web/   React + Vite + Tailwind: her look (MechaHalo from the portfolio), chat, a
 app/   Swift + AppKit: the floating window, dragging, ⌥Space, menu bar, brain
 scripts/build.sh   builds web/, then app/, and bundles both into one .app
 install.sh         checks the tools, runs the build, copies the app into Applications
+                   (also what she runs to update herself, from app/Sources/MISA/Actions/Updater.swift)
 ```
 
 - The web view only **asks** for things through a small set of messages (`web/src/bridge.ts`). Only the Swift side can act on the Mac.

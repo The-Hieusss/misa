@@ -76,6 +76,9 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
             guard let self else { return }
             self.send(self.brain.timerFinished(label).json)
         }
+        // Update notices and failures show up in the chat like any reply (with the unread dot).
+        Updater.announce = { [weak self] reply in self?.send(reply.json) }
+        Updater.startDailyCheck()
     }
 
     /// The web view may only show M.I.S.A.'s own page. Anything else is cancelled,
@@ -121,6 +124,13 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
         if !panel.isVisible { show() }
         if mode == .docked { return undock(openChat: true) }
         send(["type": "toggle"])
+    }
+
+    /// Opens the chat if it isn't open (never closes it).
+    func openChat() {
+        if !panel.isVisible { show() }
+        if mode == .docked { return undock(openChat: true) }
+        if mode != .open { send(["type": "toggle"]) }
     }
 
     func resetPosition() {
@@ -335,6 +345,8 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
                 enterDocked()
             } else if mode == .open { setOpen() } else { setCollapsed() }
             sendTimer()
+            // Just restarted after an update: say what's new.
+            if let hello = Updater.greeting() { send(hello.json) }
         case "skin":
             // Saved from the wardrobe panel. Only short known fields are kept.
             if let skin = body["skin"] as? [String: Any] {

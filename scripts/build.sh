@@ -46,6 +46,13 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
 </plist>
 EOF
 
+# Where she was built from, so she can update herself ("update yourself"): the source folder,
+# the commit, and the PATH that found swift and bun/npm (apps launched from Finder get a bare PATH).
+PLIST="$APP/Contents/Info.plist"
+plutil -replace MISASource -string "$ROOT" "$PLIST"
+plutil -replace MISACommit -string "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)" "$PLIST"
+plutil -replace MISABuildPath -string "$(dirname "$(command -v "$JS" 2>/dev/null || echo /usr/bin/true)"):$PATH" "$PLIST"
+
 # Ad-hoc signature so macOS will run it locally.
 codesign --force --sign - "$APP" >/dev/null
 echo "✓ Built $APP"
