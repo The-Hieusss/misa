@@ -35,13 +35,16 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
     private var pointerTimer: Timer?
     private var lastPointer: CGPoint?
     private var ticks = 0
+    /// Collapsed: the parts of the window that take clicks (her arms, in web coordinates). The
+    /// halo circle always does; everything else clicks through to what's behind her.
+    private var hotRects: [CGRect] = []
 
     var isVisible: Bool { panel.isVisible }
     var isDocked: Bool { mode == .docked }
 
     override init() {
         haloOrigin = Geometry.ensureOnScreen(Self.loadOrigin() ?? Geometry.defaultHaloOrigin())
-        panel = MisaPanel(frame: NSRect(origin: haloOrigin, size: NSSize(width: Geometry.halo, height: Geometry.halo)))
+        panel = MisaPanel(frame: Geometry.collapsedFrame(haloOrigin: haloOrigin))
 
         let config = WKWebViewConfiguration()
         config.mediaTypesRequiringUserActionForPlayback = []
@@ -230,6 +233,15 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
     private func feedPointer() {
         guard panel.isVisible else { return }
         let m = NSEvent.mouseLocation
+        if mode == .collapsed || mode == .open, drag == nil {
+            // Take clicks over her; let them through elsewhere. While a button is held (a file
+            // being dragged in, say) only ever start taking them, so a drop can still land.
+            if overHer(m) {
+                if panel.ignoresMouseEvents { panel.ignoresMouseEvents = false }
+            } else if NSEvent.pressedMouseButtons == 0, !panel.ignoresMouseEvents {
+                panel.ignoresMouseEvents = true
+            }
+        }
         if mode == .docked {
             let over = hypot(m.x - cameraCenter.x, m.y - cameraCenter.y) <= Geometry.camera / 2 + 3
             if panel.ignoresMouseEvents == over { panel.ignoresMouseEvents = !over }
@@ -250,24 +262,47 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
         let layout = Geometry.openLayout(haloOrigin: haloOrigin)
         openLayout = layout
         mode = .open
+        panel.ignoresMouseEvents = false
         panel.setFrame(layout.frame, display: true)
         clipToCircle(false)
         haloOrigin = Geometry.haloOrigin(openFrame: layout.frame, haloInWindow: layout.haloInWindow)
+        let room = Geometry.armRoom(haloOrigin: haloOrigin)
         panel.makeKeyAndOrderFront(nil) // so typing goes to the chat
         send([
             "type": "layout", "mode": "open",
             "halo": ["x": layout.haloInWindow.x, "y": layout.haloInWindow.y],
             "right": layout.right, "bottom": layout.bottom,
+            "arms": ["left": room.left, "right": room.right],
         ])
     }
 
     private func setCollapsed() {
         mode = .collapsed
         openLayout = nil
-        panel.setFrame(NSRect(origin: haloOrigin, size: NSSize(width: Geometry.halo, height: Geometry.halo)), display: true)
-        clipToCircle(true)
+        panel.setFrame(Geometry.collapsedFrame(haloOrigin: haloOrigin), display: true)
+        clipToCircle(false)
         panel.resignKey()
-        send(["type": "layout", "mode": "collapsed", "halo": ["x": 0, "y": 0], "right": true, "bottom": true])
+        sendCollapsedLayout()
+    }
+
+    /// Tells the page where the halo sits and which sides have screen room for an arm.
+    private func sendCollapsedLayout() {
+        let h = Geometry.haloInCollapsed, room = Geometry.armRoom(haloOrigin: haloOrigin)
+        send(["type": "layout", "mode": "collapsed", "halo": ["x": h.x, "y": h.y], "right": true, "bottom": true,
+              "arms": ["left": room.left, "right": room.right]])
+    }
+
+    /// Is the mouse over something of hers: the halo, an arm, or (open) the chat panel?
+    private func overHer(_ m: CGPoint) -> Bool {
+        let f = panel.frame, r = Geometry.halo / 2
+        let h = mode == .open ? (openLayout?.haloInWindow ?? .zero) : Geometry.haloInCollapsed
+        // The chat rect was measured when it opened; follow the window if she's been dragged since.
+        if mode == .open, let l = openLayout,
+           l.chat.offsetBy(dx: f.minX - l.frame.minX, dy: f.minY - l.frame.minY).contains(m) { return true }
+        let cx = f.minX + h.x + r, cy = f.maxY - h.y - r
+        if hypot(m.x - cx, m.y - cy) <= r - 6 { return true }
+        let p = CGPoint(x: m.x - f.minX, y: f.maxY - m.y)
+        return hotRects.contains { $0.contains(p) }
     }
 
     /// Files dropped on her: open the chat if needed, then offer what she can do with them.
@@ -313,13 +348,13 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
         case .collapsed:
             // Dragged up into the menu bar? Put her away there.
             let visible = (panel.screen ?? NSScreen.main ?? NSScreen.screens[0]).visibleFrame
-            if panel.frame.maxY > visible.maxY + 6 {
-                var o = panel.frame.origin
-                o.y = visible.maxY - Geometry.halo - 12 // come back just below the menu bar
-                haloOrigin = o
+            let o = CGPoint(x: panel.frame.minX + Geometry.armSide, y: panel.frame.minY + Geometry.armBottom)
+            if o.y + Geometry.halo > visible.maxY + 6 {
+                haloOrigin = CGPoint(x: o.x, y: visible.maxY - Geometry.halo - 12) // come back just below the menu bar
                 dock()
             } else {
-                haloOrigin = panel.frame.origin
+                haloOrigin = o
+                sendCollapsedLayout() // screen room for her arms may have changed
             }
         case .open:
             if let layout = openLayout {
@@ -350,10 +385,15 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
         case "skin":
             // Saved from the wardrobe panel. Only short known fields are kept.
             if let skin = body["skin"] as? [String: Any] {
-                let keys = ["color", "custom", "cog", "ring", "clamp", "glyphs", "eye", "eyeCustom", "eye2", "iris", "pupil", "core", "coreCustom"]
+                let keys = ["color", "custom", "cog", "ring", "clamp", "scanner", "arms", "eye", "eyeCustom", "eye2", "iris", "pupil", "core", "coreCustom"]
                 let clean = skin.compactMapValues { $0 as? String }.filter { keys.contains($0.key) && $0.value.count <= 16 }
                 UserDefaults.standard.set(clean, forKey: "skin")
                 FileOps.log("skin saved: \(clean.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))")
+            }
+        case "hot":
+            // Where her arms are now, so only they (and the halo) take clicks.
+            hotRects = (body["rects"] as? [[Double]] ?? []).prefix(4).compactMap { r in
+                r.count == 4 ? CGRect(x: r[0], y: r[1], width: r[2], height: r[3]) : nil
             }
         case "dock":
             dock()

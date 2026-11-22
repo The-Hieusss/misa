@@ -21,6 +21,7 @@ export type ToSwift =
   | { type: "undock" } // the camera finished retracting; Swift can bring her back
   | { type: "menu" } // right-clicked the camera
   | { type: "dragStart" } // the mouse went down on a drag handle
+  | { type: "hot"; rects: number[][] } // where her arms are ([x, y, w, h]), so only they take clicks
   | { type: "skin"; skin: Skin }; // saved from the wardrobe; Swift remembers it
 
 export type TimerState = {
@@ -46,6 +47,8 @@ export type FromSwift =
       /** Which side of the screen she's on, so the panel opens toward the middle. */
       right: boolean;
       bottom: boolean;
+      /** Collapsed: which sides have screen room for an arm. */
+      arms?: { left: boolean; right: boolean };
     }
   | { type: "reply"; text: string; suggestions?: Suggestion[]; confirm?: Confirm }
   | { type: "dragHover"; on: boolean } // files are being dragged over her
@@ -92,10 +95,10 @@ function browserFallback(m: ToSwift) {
   const emit = (r: FromSwift) => setTimeout(() => window.misa?.receive(r), 10);
   switch (m.type) {
     case "open":
-      emit({ type: "layout", mode: "open", halo: { x: 280, y: 520 }, right: true, bottom: true });
+      emit({ type: "layout", mode: "open", halo: { x: 260, y: 516 }, right: true, bottom: true, arms: { left: true, right: true } });
       break;
     case "close":
-      emit({ type: "layout", mode: "collapsed", halo: { x: 0, y: 0 }, right: true, bottom: true });
+      emit({ type: "layout", mode: "collapsed", halo: { x: 90, y: 40 }, right: true, bottom: true, arms: { left: true, right: true } });
       break;
     case "ask":
       if (/focus|timer/i.test(m.text)) {
@@ -123,7 +126,7 @@ function browserFallback(m: ToSwift) {
       emit({ type: "layout", mode: "docked", camera: { x: 160, y: 36 }, halo: { x: 0, y: 0 }, right: true, bottom: false });
       break;
     case "undock":
-      emit({ type: "layout", mode: "collapsed", halo: { x: 0, y: 0 }, right: true, bottom: true });
+      emit({ type: "layout", mode: "collapsed", halo: { x: 90, y: 40 }, right: true, bottom: true, arms: { left: true, right: true } });
       break;
     case "cancel":
       emit({ type: "reply", text: "(browser preview) Okay, I left everything as it was." });

@@ -7,6 +7,17 @@ enum Geometry {
     static let panelHeight: CGFloat = 510
     static let gap: CGFloat = 6
 
+    /// Collapsed, the window has room around the halo for her arms (empty space clicks through).
+    static let armSide: CGFloat = 90
+    static let armTop: CGFloat = 40
+    static let armBottom: CGFloat = 50
+    static var collapsedSize: NSSize { NSSize(width: halo + armSide * 2, height: halo + armTop + armBottom) }
+    /// The halo's top-left inside the collapsed window (web coordinates, y down).
+    static var haloInCollapsed: CGPoint { CGPoint(x: armSide, y: armTop) }
+    static func collapsedFrame(haloOrigin o: CGPoint) -> NSRect {
+        NSRect(origin: CGPoint(x: o.x - armSide, y: o.y - armBottom), size: collapsedSize)
+    }
+
     /// Docked: the camera hangs from the bottom edge of the menu bar.
     static let camera: CGFloat = 64
     static let cameraWindow = NSSize(width: 320, height: 330)
@@ -25,9 +36,12 @@ enum Geometry {
         var haloInWindow: CGPoint
         var right: Bool
         var bottom: Bool
+        /// The chat panel on screen (it and the halo take clicks; the rest clicks through).
+        var chat: NSRect
     }
 
-    /// Grows the window from the halo toward the middle of the screen.
+    /// Grows the window from the halo toward the middle of the screen. The chat and halo stay on
+    /// screen; the room for her arms around the halo may hang off the edge.
     static func openLayout(haloOrigin: CGPoint) -> OpenLayout {
         let haloRect = NSRect(origin: haloOrigin, size: NSSize(width: halo, height: halo))
         let screen = screenFor(haloRect)
@@ -36,19 +50,26 @@ enum Geometry {
         let bottom = haloRect.midY < visible.midY
 
         let size = openSize
-        var frame = NSRect(
+        var core = NSRect(
             x: right ? haloRect.maxX - size.width : haloRect.minX,
             y: bottom ? haloRect.minY : haloRect.maxY - size.height,
             width: size.width,
             height: size.height
         )
-        frame = clamp(frame, to: visible)
+        core = clamp(core, to: visible)
 
-        let haloInWindow = CGPoint(
-            x: right ? size.width - halo : 0,
-            y: bottom ? size.height - halo : 0
-        )
-        return OpenLayout(frame: frame, haloInWindow: haloInWindow, right: right, bottom: bottom)
+        // Where the halo ends up after clamping (screen coordinates), plus room for her arms.
+        let haloScreen = CGPoint(x: right ? core.maxX - halo : core.minX, y: bottom ? core.minY : core.maxY - halo)
+        let frame = core.union(collapsedFrame(haloOrigin: haloScreen))
+        let haloInWindow = CGPoint(x: haloScreen.x - frame.minX, y: frame.maxY - (haloScreen.y + halo))
+        let chat = NSRect(x: core.minX, y: bottom ? core.maxY - panelHeight : core.minY, width: core.width, height: panelHeight)
+        return OpenLayout(frame: frame, haloInWindow: haloInWindow, right: right, bottom: bottom, chat: chat)
+    }
+
+    /// Which sides of a halo at `origin` have screen room for an arm.
+    static func armRoom(haloOrigin o: CGPoint) -> (left: Bool, right: Bool) {
+        let visible = screenFor(NSRect(origin: o, size: NSSize(width: halo, height: halo))).visibleFrame
+        return (o.x - armSide + 10 >= visible.minX, o.x + halo + armSide - 10 <= visible.maxX)
     }
 
     /// The halo's screen origin (bottom-left, AppKit coordinates) for a window in open mode.
@@ -58,7 +79,7 @@ enum Geometry {
 
     static func defaultHaloOrigin() -> CGPoint {
         let visible = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
-        return CGPoint(x: visible.maxX - halo - 24, y: visible.minY + 24)
+        return CGPoint(x: visible.maxX - halo - armSide, y: visible.minY + armBottom) // room for her arms
     }
 
     static func screenFor(_ rect: NSRect) -> NSScreen {

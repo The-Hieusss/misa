@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { motion, useAnimationFrame, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import type { MotionValue } from "framer-motion";
-import { GLYPHS, rgb, useSkin } from "./skin";
-import { C, CLAMP_ART, CogArt, GYRO, PlatePattern, RING_SPECS, arcPath, hex, platePath, pt, spikePaths, ventAngles } from "./shell-parts";
+import { rgb, useSkin } from "./skin";
+import { C, CLAMP_ART, CogArt, GYRO, PlatePattern, RING_SPECS, Scanner, arcPath, hex, platePath, pt, spikePaths, ventAngles } from "./shell-parts";
 import type { Seg } from "./shell-parts";
 import { cn } from "@/lib/utils";
 import MechaEye from "./mecha-eye";
@@ -14,12 +14,6 @@ const ticks = Array.from({ length: 72 }, (_, i) => ({ a: i * 5, major: i % 6 ===
 const finsFull = Array.from({ length: 48 }, (_, i) => i * 7.5);
 const finsCompact = Array.from({ length: 24 }, (_, i) => i * 15);
 const bolts = Array.from({ length: 8 }, (_, i) => i * 45 + 22.5);
-const sweepSlices = Array.from({ length: 10 }, (_, i) => i); // fading radar trail, 4° each
-
-/** Wedge between two radii (used for the radar sweep trail). */
-function wedge(r1: number, r2: number, a0: number, a1: number) {
-  return platePath(r1, r2, a0, a1, 0);
-}
 
 /* ── Surge timeline (seconds), synced to playMechaSpin(2.6) ─────────────────── */
 const T = 2.6; // total
@@ -117,7 +111,6 @@ export default function MechaHalo({
   const { p, skin } = useSkin();
   const spec = RING_SPECS[skin.ring];
   const clamp = skin.clamp === "none" ? null : CLAMP_ART[skin.clamp];
-  const glyphs = GLYPHS[skin.glyphs].set;
   const segShape = (s: Seg) => (spec.shape ? spec.shape(s) : platePath(s.r1, s.r2, s.a0, s.a1, spec.chamfer));
   const pushDist = PUSH_PX * (spec.push ?? 1);
   const heat = charged ? 1 : 0;
@@ -300,7 +293,7 @@ export default function MechaHalo({
               })}
           </Layer>
 
-          {/* ── dial: ticks, cardinal markers, radar sweep ── */}
+          {/* ── dial: ticks, cardinal markers, scanner ── */}
           <Layer z={Z.dial}>
             {!compact &&
               ticks.map(({ a, major }) => {
@@ -319,13 +312,7 @@ export default function MechaHalo({
                   />
                 );
               })}
-            <motion.g style={{ rotate: sweep }}>
-              <circle cx={C} cy={C} r="146" fill="none" />
-              {sweepSlices.map((i) => (
-                <path key={i} d={wedge(110, 146, -i * 4 - 4, -i * 4)} fill={p.main} fillOpacity={(0.32 * (10 - i)) / 10} />
-              ))}
-              <line x1={C} y1={C - 110} x2={C} y2={C - 146} stroke={p.light} strokeWidth="1.5" />
-            </motion.g>
+            <Scanner kind={skin.scanner} p={p} angle={sweep} />
             {!compact &&
               [0, 90, 180, 270].map((a) => (
                 <polygon
@@ -430,7 +417,6 @@ export default function MechaHalo({
                 </g>
               ) : null}
               {spec.segs.map((s) => {
-                const badge = pt(spec.badgeR ?? s.r1 + 8.5, s.mid);
                 return (
                   <Radial key={`${s.mid}-${s.index}`} angle={s.mid} push={push} dist={pushDist}>
                     {spec.spikes
@@ -489,22 +475,6 @@ export default function MechaHalo({
                           const [x, y] = pt(s.r1 + 9, a);
                           return <circle key={a} cx={x} cy={y} r="2.3" fill={p.ink} stroke={p.main} strokeOpacity="0.8" strokeWidth="1" />;
                         })}
-                      </>
-                    )}
-                    {!compact && s.badge && (
-                      <>
-                        <circle cx={badge[0]} cy={badge[1]} r="9.5" fill={p.ink} stroke={p.light} strokeOpacity={charged ? 1 : 0.6} strokeWidth="1" style={fade} />
-                        <circle cx={badge[0]} cy={badge[1]} r="12" fill="none" stroke={p.main} strokeOpacity="0.35" strokeWidth="0.8" strokeDasharray="1.5 2.5" />
-                        <text
-                          x={badge[0]}
-                          y={badge[1] + 4.5}
-                          textAnchor="middle"
-                          fontFamily="Cinzel, 'Apple Symbols', serif"
-                          fontSize={glyphs[s.index % glyphs.length].length > 2 ? 10 : 13}
-                          fill={p.light}
-                        >
-                          {glyphs[s.index % glyphs.length]}
-                        </text>
                       </>
                     )}
                   </Radial>

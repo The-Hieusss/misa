@@ -58,8 +58,11 @@ Click the palette button in the chat header to open her wardrobe. Every choice s
 | Color | Ember, Arc reactor, Toxic, Crimson, Void, Brass, Chrome, Sakura, or any custom color (she builds the darker metals and highlights from it) |
 | Ring | 4 armor plates, 6 segments, 8 blades, vented band, twin crescents, spiked crown, floating shards, gyro rings, hex frame, sawblade, visor arc, petal plates, chain links, satellite pods, double tier, cross arms |
 | Inner cog | The ring that spins inside her shell: classic teeth, honeycomb, carbon weave, circuit traces, hazard stripes, bearing dots, topographic, Greek key |
-| Clamps | Bracket, talon claw, piston, arrow fin, round lug, twin prongs, rune tablet, none |
-| Badges | Greek (Α Θ Σ Ω), Roman, runes, M I S A |
+| Clamps | Bracket, talon claw, piston, arrow fin, round lug, twin prongs, rune tablet, crown, hammerhead, kite shield, pincer, turbine, ziggurat, spearhead, knuckles, none |
+| Scanner | What sweeps around the dial between her eye and the plates: radar sweep, twin beams, quad beams, comet, loader arc, laser line, pulse rings, off |
+| Arms | Claw, hydraulic, slim rods, arm blade, arm cannon, tentacle, magnet, or no arms |
+
+Her **arms** are live: they sway and snap their claws when idle, the arm on your side reaches for the cursor, both come up when you hover over her, reach out wide when you drag files over her, and one waves when she has a message waiting. Click an arm and it waves back. While the chat is open they stay out (behind the chat), go to work while she replies, and snap when the answer lands. An arm hides when there's no screen room on its side. The empty space around her still clicks through to whatever is behind it. They live in `web/src/misa/mecha-arms.tsx`.
 
 The **Eye** tab changes her eye on its own:
 

@@ -53,6 +53,8 @@ plutil -replace MISASource -string "$ROOT" "$PLIST"
 plutil -replace MISACommit -string "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)" "$PLIST"
 plutil -replace MISABuildPath -string "$(dirname "$(command -v "$JS" 2>/dev/null || echo /usr/bin/true)"):$PATH" "$PLIST"
 
-# Ad-hoc signature so macOS will run it locally.
+# Ad-hoc signature so macOS will run it locally. Clear Finder/extended attributes first:
+# codesign refuses a bundle that has picked any up ("resource fork ... detritus not allowed").
+xattr -cr "$APP"
 codesign --force --sign - "$APP" >/dev/null
 echo "✓ Built $APP"

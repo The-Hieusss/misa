@@ -1,13 +1,15 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Check, RotateCcw } from "lucide-react";
-import { CLAMPS, DEFAULT_SKIN, GLYPHS, IRISES, COGS, PALETTES, PUPILS, RINGS, eyeColors, paletteFor } from "./skin";
+import { useAnimationFrame, useMotionValue, useReducedMotion } from "framer-motion";
+import { ARMS, CLAMPS, DEFAULT_SKIN, IRISES, COGS, PALETTES, PUPILS, RINGS, SCANNERS, eyeColors, paletteFor } from "./skin";
 import { IrisPattern, Pupil } from "./eye-parts";
 import type { Palette, Skin } from "./skin";
-import { C, CLAMP_ART, CogArt, GYRO, RING_SPECS, platePath, spikePaths } from "./shell-parts";
+import { ArmArt } from "./mecha-arms";
+import { C, CLAMP_ART, CogArt, GYRO, RING_SPECS, Scanner, platePath, spikePaths } from "./shell-parts";
 
 /**
- * Pick her colors, inner cog, ring, clamps and badges. Every change shows on her right
+ * Pick her colors, inner cog, ring, clamps, arms and scanner. Every change shows on her right
  * away (the caller renders the draft); Save keeps it, Cancel puts the old look back.
  */
 export function Wardrobe({
@@ -25,6 +27,12 @@ export function Wardrobe({
   const eye = eyeColors(draft, p);
   const set = <K extends keyof Skin>(k: K, v: Skin[K]) => onChange({ ...draft, [k]: v });
   const [tab, setTab] = useState<"shell" | "eye">("shell");
+  // One shared clock turns every scanner preview, at her idle speed.
+  const scan = useMotionValue(30);
+  const still = useReducedMotion();
+  useAnimationFrame((_, dt) => {
+    if (!still) scan.set((scan.get() + (70 * dt) / 1000) % 360);
+  });
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
@@ -174,7 +182,10 @@ export function Wardrobe({
                   {id === "none" ? (
                     <path d={`M${C - 9} 4 H${C + 9} V40 H${C - 9} Z`} fill="none" stroke={p.main} strokeOpacity="0.5" strokeWidth="1.4" strokeDasharray="3 3" />
                   ) : (
-                    <path d={CLAMP_ART[id].outline} fill={p.plateA} stroke={p.main} strokeWidth="1.8" strokeLinejoin="round" />
+                    <>
+                      <path d={CLAMP_ART[id].outline} fill={p.socket} stroke={p.main} strokeWidth="1.8" strokeLinejoin="round" />
+                      {CLAMP_ART[id].detail({ p, compact: true, charged: true, i: 0 })}
+                    </>
                   )}
                 </svg>
               </Tile>
@@ -182,19 +193,39 @@ export function Wardrobe({
           </div>
         </Section>
 
-        <Section title="Badges">
+        <Section title="Arms">
           <div className="grid grid-cols-4 gap-2">
-            {(Object.keys(GLYPHS) as Skin["glyphs"][]).map((id) => (
-              <Tile key={id} on={draft.glyphs === id} onClick={() => set("glyphs", id)} label={GLYPHS[id].name}>
-                <span className="font-display text-[13px] leading-[30px] text-peach" style={{ fontFamily: "Cinzel, 'Apple Symbols', serif" }}>
-                  {GLYPHS[id].set.join(" ")}
-                </span>
+            {(Object.keys(ARMS) as Skin["arms"][]).map((id) => (
+              <Tile key={id} on={draft.arms === id} onClick={() => set("arms", id)} label={ARMS[id]}>
+                {id === "off" ? (
+                  <svg viewBox="0 0 60 34" className="h-[30px] w-[52px]" aria-hidden>
+                    <circle cx="30" cy="17" r="11" fill={p.socket} stroke={p.main} strokeWidth="1.6" />
+                    <circle cx="30" cy="17" r="3.5" fill={p.light} />
+                  </svg>
+                ) : (
+                  // the arm raised in a wave, shoulder at bottom left
+                  <svg viewBox="-8 -40 96 52" className="h-[30px] w-[56px]" aria-hidden>
+                    <ArmArt p={p} kind={id} pose={{ x: 0, y: 4, th1: -10, th2: -62, grip: 30 }} />
+                  </svg>
+                )}
               </Tile>
             ))}
           </div>
-          {RING_SPECS[draft.ring].segs.some((s) => s.badge) ? null : (
-            <p className="mt-2 font-mono text-[10px] text-dim">This ring has no badges, so these won't show.</p>
-          )}
+        </Section>
+
+        <Section title="Scanner">
+          <div className="grid grid-cols-4 gap-2">
+            {(Object.keys(SCANNERS) as Skin["scanner"][]).map((id) => (
+              <Tile key={id} on={draft.scanner === id} onClick={() => set("scanner", id)} label={SCANNERS[id]}>
+                {/* the dial band, in her light color so it reads at tile size */}
+                <svg viewBox={`${C - 149} ${C - 149} 298 298`} className="h-[34px] w-[34px]" aria-hidden>
+                  <circle cx={C} cy={C} r="146" fill={p.ink} stroke={p.main} strokeOpacity="0.4" strokeWidth="5" />
+                  <Scanner kind={id} p={{ ...p, main: p.light }} angle={scan} />
+                  <circle cx={C} cy={C} r="104" fill={p.plateB} stroke={p.main} strokeOpacity="0.6" strokeWidth="5" />
+                </svg>
+              </Tile>
+            ))}
+          </div>
         </Section>
           </>
         )}

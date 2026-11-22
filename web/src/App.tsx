@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { ArrowUpToLine, Palette, Send, X } from "lucide-react";
 import MechaHalo from "./misa/mecha-halo";
+import MechaArms from "./misa/mecha-arms";
 import { HudCorners } from "./misa/hud-corners";
 import { playMechaClose, playMechaOpen } from "./lib/mecha-sfx";
 import { inApp, onMessage, send } from "./bridge";
@@ -238,9 +239,10 @@ export default function App() {
   const [layout, setLayout] = useState<Layout>({
     type: "layout",
     mode: "collapsed",
-    halo: { x: 0, y: 0 },
+    halo: { x: 90, y: 40 }, // Geometry.haloInCollapsed
     right: true,
     bottom: true,
+    arms: { left: true, right: true },
   });
   const [panelShown, setPanelShown] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -466,6 +468,24 @@ export default function App() {
   return (
     <SkinContext.Provider value={look}>
       <div className="relative h-full w-full">
+        {/* Her arms, behind the halo and the chat panel (they tuck away in the menu bar) */}
+        <AnimatePresence>
+          {layout.mode !== "docked" && layout.arms && look.arms !== "off" && !leaving ? (
+            <MechaArms
+              key={`arms-${spawn}`}
+              halo={layout.halo}
+              room={layout.arms}
+              dragHover={hover}
+              unread={unread}
+              surge={surge}
+              reduce={!!reduce}
+              kind={look.arms}
+              chatting={panelShown}
+              thinking={thinking}
+            />
+          ) : null}
+        </AnimatePresence>
+
         {/* Chat panel */}
         <AnimatePresence
           onExitComplete={() => !leavingRef.current && send({ type: "close" })}
@@ -697,6 +717,7 @@ export default function App() {
             onRetracted={() => send({ type: "undock" })}
           />
         ) : null}
+
 
         {/* The halo: draggable, click to open/close */}
         {layout.mode !== "docked" ? (

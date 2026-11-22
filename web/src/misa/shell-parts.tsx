@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { motion, useTransform } from "framer-motion";
+import type { MotionValue } from "framer-motion";
 import type { Palette, Skin } from "./skin";
 
 /* Geometry for M.I.S.A.'s swappable shell parts, in the halo's 400×400 viewBox. */
@@ -44,8 +46,6 @@ export type RingSpec = {
   shape?: (s: Seg) => string;
   /** Skip the arc trim (edge highlights, flow light, screws, vents) for shapes it doesn't fit. */
   plain?: boolean;
-  /** Radius for plate badges (default: just inside the plate's inner edge). */
-  badgeR?: number;
   /** A full ring drawn under the plates (r = center radius, w = width). */
   track?: { r: number; w: number };
 };
@@ -100,7 +100,7 @@ export const RING_SPECS: Record<Skin["ring"], RingSpec> = {
   crown: { segs: ring(every(4), 52, 160, 184, true), clamps: DIAG, chamfer: 4, spikes: true },
   shards: { segs: ring(every(8), 22, 164, 186, false), clamps: every(4, 22.5), chamfer: 6, push: 1.8 },
   gyro: { segs: [], clamps: DIAG, chamfer: 0, gyro: true },
-  hex: { segs: ring(every(6), 54, 170, 196, true), clamps: [30, 150, 210, 330], chamfer: 0, shape: hexSide, plain: true, badgeR: 163 },
+  hex: { segs: ring(every(6), 54, 170, 196, true), clamps: [30, 150, 210, 330], chamfer: 0, shape: hexSide, plain: true },
   saw: { segs: ring(every(4), 88.5, 164, 180, true), clamps: DIAG, chamfer: 0, shape: sawPlate },
   visor: { segs: [seg(180, 45, 315, 160, 186, true, 0), seg(0, -20, 20, 164, 182, false, 1)], clamps: [27, 333, 135, 225], chamfer: 5 },
   petals: { segs: ring(every(6), 46, 160, 178, true), clamps: [30, 150, 210, 330], chamfer: 4, shape: petal },
@@ -113,7 +113,7 @@ export const RING_SPECS: Record<Skin["ring"], RingSpec> = {
     segs: [...ring(every(8, 22.5), 40, 158, 168, false), ...ring(every(4), 60, 172, 194, true).map((x) => ({ ...x, index: x.index + 8 }))],
     clamps: DIAG, chamfer: 3,
   },
-  cross: { segs: ring(every(4, 45), 28, 158, 197, true), clamps: every(4), chamfer: 0, shape: arm, plain: true, badgeR: 176, track: { r: 167, w: 10 } },
+  cross: { segs: ring(every(4, 45), 28, 158, 197, true), clamps: every(4), chamfer: 0, shape: arm, plain: true, track: { r: 167, w: 10 } },
 };
 
 /** Vent slots either side of a plate's badge, as many as fit. */
@@ -240,6 +240,113 @@ export const CLAMP_ART: Record<Exclude<Skin["clamp"], "none">, ClampArt> = {
           strokeLinecap="round"
           {...pulse(o)}
         />
+      </>
+    ),
+  },
+  crown: {
+    // Three points facing out, a gem on each.
+    outline: `M${C - 14} 42 V3 L${C - 7} 11 L${C} 0 L${C + 7} 11 L${C + 14} 3 V42 Z`,
+    detail: (o) => (
+      <>
+        <line x1={C - 12} y1={19} x2={C + 12} y2={19} stroke={o.p.main} strokeOpacity="0.6" strokeWidth="1.2" />
+        {!o.compact && <line x1={C - 12} y1={22} x2={C + 12} y2={22} stroke={o.p.main} strokeOpacity="0.35" strokeWidth="0.8" />}
+        {[[C - 11.5, 9], [C, 7], [C + 11.5, 9]].map(([x, y]) => (
+          <polygon key={x} points={`${x},${y - 3} ${x + 2.4},${y} ${x},${y + 3} ${x - 2.4},${y}`} fill={lit(o)} {...pulse(o)} />
+        ))}
+        {bolt(o, C, 31, 3.2)}
+      </>
+    ),
+  },
+  hammer: {
+    // A wide head on a narrow neck, with a lit slot across the head.
+    outline: `M${C - 16} 1 H${C + 16} L${C + 17} 6 L${C + 16} 13 H${C + 6} V42 H${C - 6} V13 H${C - 16} L${C - 17} 6 Z`,
+    detail: (o) => (
+      <>
+        <rect x={C - 12} y={5.5} width="24" height="3" rx="1.5" fill={lit(o)} {...pulse(o)} />
+        <g stroke={o.p.main} strokeOpacity="0.5" strokeWidth="1">
+          <line x1={C - 4} y1={20} x2={C + 4} y2={20} />
+          <line x1={C - 4} y1={25} x2={C + 4} y2={25} />
+          {!o.compact && <line x1={C - 4} y1={30} x2={C + 4} y2={30} />}
+        </g>
+        {bolt(o, C, 36, 2.8)}
+      </>
+    ),
+  },
+  shield: {
+    // A kite shield, point toward her eye, with a glowing chevron.
+    outline: `M${C - 13} 3 Q${C} -1 ${C + 13} 3 V21 Q${C + 12} 34 ${C} 42 Q${C - 12} 34 ${C - 13} 21 Z`,
+    detail: (o) => (
+      <>
+        {!o.compact && <path d={`M${C - 10} 6 Q${C} 3 ${C + 10} 6 V21 Q${C + 9} 31 ${C} 38 Q${C - 9} 31 ${C - 10} 21 Z`} fill="none" stroke={o.p.main} strokeOpacity="0.4" strokeWidth="0.8" />}
+        <path d={`M${C - 7} 12 L${C} 19 L${C + 7} 12`} fill="none" stroke={lit(o)} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...pulse(o)} />
+        <path d={`M${C - 7} 20 L${C} 27 L${C + 7} 20`} fill="none" stroke={o.p.main} strokeOpacity="0.6" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
+  pincer: {
+    // Two jaws curling in over an energy orb.
+    outline: `M${C - 13} 42 V20 C${C - 13} 9 ${C - 9} 2 ${C - 2} 0 L${C - 3} 6 C${C - 6} 8 ${C - 7} 13 ${C - 7} 20 H${C + 7} C${C + 7} 13 ${C + 6} 8 ${C + 3} 6 L${C + 2} 0 C${C + 9} 2 ${C + 13} 9 ${C + 13} 20 V42 Z`,
+    detail: (o) => (
+      <>
+        <circle cx={C} cy={12} r="5" fill={lit(o)} fillOpacity="0.25" {...pulse(o)} />
+        <circle cx={C} cy={12} r="2.8" fill={lit(o)} {...pulse(o)} />
+        <line x1={C - 11} y1={28} x2={C + 11} y2={28} stroke={o.p.main} strokeOpacity="0.5" strokeWidth="1" />
+        {!o.compact && <path d={`M${C - 10.5} 20 C${C - 10.5} 12 ${C - 7.5} 6 ${C - 4} 4 M${C + 10.5} 20 C${C + 10.5} 12 ${C + 7.5} 6 ${C + 4} 4`} fill="none" stroke={o.p.main} strokeOpacity="0.4" strokeWidth="0.8" />}
+        {bolt(o, C, 35, 3)}
+      </>
+    ),
+  },
+  turbine: {
+    // A round fan housing on a short mount.
+    outline: `M${C - 8} 42 V27 A14 14 0 1 1 ${C + 8} 27 V42 Z`,
+    detail: (o) => (
+      <>
+        <circle cx={C} cy={15} r="10" fill={o.p.ink} stroke={o.p.main} strokeOpacity="0.7" strokeWidth="1" />
+        {[0, 72, 144, 216, 288].map((a) => (
+          <path key={a} d={`M${C} 15 Q${C + 5} 10 ${C + 2} 6.5`} fill="none" stroke={o.p.main} strokeOpacity="0.8" strokeWidth="1.6" strokeLinecap="round" transform={`rotate(${a} ${C} 15)`} />
+        ))}
+        <circle cx={C} cy={15} r="2.6" fill={lit(o)} {...pulse(o)} />
+        <line x1={C - 6} y1={36} x2={C + 6} y2={36} stroke={o.p.main} strokeOpacity="0.5" strokeWidth="1" />
+      </>
+    ),
+  },
+  ziggurat: {
+    // Stepped tower, a light on every step.
+    outline: `M${C - 5} 1 H${C + 5} V9 H${C + 10} V18 H${C + 14} V42 H${C - 14} V18 H${C - 10} V9 H${C - 5} Z`,
+    detail: (o) => (
+      <>
+        <rect x={C - 3} y={4} width="6" height="2.2" fill={lit(o)} {...pulse(o)} />
+        <rect x={C - 8} y={12.5} width="16" height="2" fill={lit(o)} fillOpacity="0.75" {...pulse(o)} />
+        <rect x={C - 12} y={22} width="24" height="2" fill={lit(o)} fillOpacity="0.5" {...pulse(o)} />
+        {!o.compact && <line x1={C} y1={27} x2={C} y2={40} stroke={o.p.main} strokeOpacity="0.4" strokeWidth="0.8" />}
+        {bolt(o, C - 7, 33, 2.6)}
+        {bolt(o, C + 7, 33, 2.6)}
+      </>
+    ),
+  },
+  spear: {
+    // A long blade with a glowing fuller.
+    outline: `M${C} -2 L${C + 6} 11 L${C + 4} 17 H${C + 11} L${C + 9} 23 V42 H${C - 9} V23 L${C - 11} 17 H${C - 4} L${C - 6} 11 Z`,
+    detail: (o) => (
+      <>
+        <line x1={C} y1={4} x2={C} y2={15} stroke={lit(o)} strokeWidth="2" strokeLinecap="round" {...pulse(o)} />
+        <line x1={C - 9} y1={20} x2={C + 9} y2={20} stroke={o.p.main} strokeOpacity="0.6" strokeWidth="1" />
+        {!o.compact && <path d={`M${C - 6} 27 H${C + 6} M${C - 6} 31 H${C + 6}`} stroke={o.p.main} strokeOpacity="0.4" strokeWidth="0.8" />}
+        {bolt(o, C, 36, 2.8)}
+      </>
+    ),
+  },
+  knuckle: {
+    // A gauntlet's four knuckles, each with a stud.
+    outline: `M${C - 14} 42 V7 A3.5 3.5 0 0 1 ${C - 7} 7 A3.5 3.5 0 0 1 ${C} 7 A3.5 3.5 0 0 1 ${C + 7} 7 A3.5 3.5 0 0 1 ${C + 14} 7 V42 Z`,
+    detail: (o) => (
+      <>
+        {[C - 10.5, C - 3.5, C + 3.5, C + 10.5].map((x) => (
+          <circle key={x} cx={x} cy={7.5} r="1.8" fill={lit(o)} {...pulse(o)} />
+        ))}
+        <line x1={C - 12} y1={14} x2={C + 12} y2={14} stroke={o.p.main} strokeOpacity="0.6" strokeWidth="1.2" />
+        {!o.compact && [C - 7, C, C + 7].map((x) => <line key={x} x1={x} y1={15} x2={x} y2={24} stroke={o.p.main} strokeOpacity="0.35" strokeWidth="0.8" />)}
+        {bolt(o, C, 31, 3.2)}
       </>
     ),
   },
@@ -370,5 +477,89 @@ export function CogArt({ kind, p }: { kind: Skin["cog"]; p: Palette }) {
         </>
       );
     }
+  }
+}
+
+/* ── Scanner: what sweeps around the dial ring (r 110–146) ──────────────────── */
+
+const trail = (n: number, step: number) => Array.from({ length: n }, (_, i) => i).map((i) => ({ a0: -i * step - step, a1: -i * step, k: (n - i) / n }));
+
+/** A beam with a fading trail behind it, pointing at angle `at`. */
+function Beam({ p, at = 0, slices = 10, step = 4, r1 = 110, r2 = 146 }: { p: Palette; at?: number; slices?: number; step?: number; r1?: number; r2?: number }) {
+  return (
+    <g transform={`rotate(${at} ${C} ${C})`}>
+      {trail(slices, step).map(({ a0, a1, k }, i) => (
+        <path key={i} d={platePath(r1, r2, a0, a1, 0)} fill={p.main} fillOpacity={0.32 * k} />
+      ))}
+      <line x1={C} y1={C - r1} x2={C} y2={C - r2} stroke={p.light} strokeWidth="1.5" />
+    </g>
+  );
+}
+
+/**
+ * The scanner, turning with `angle` (degrees; it speeds up when she's charged). The invisible
+ * r = 146 circle keeps the group's box centered, so it spins around her eye.
+ */
+export function Scanner({ kind, p, angle }: { kind: Skin["scanner"]; p: Palette; angle: MotionValue<number> }) {
+  // Pulse: rings that grow outward through the band, one every 120° of turn.
+  const r1 = useTransform(angle, (a) => 110 + ((a % 120) / 120) * 36);
+  const r2 = useTransform(angle, (a) => 110 + (((a + 60) % 120) / 120) * 36);
+  const o1 = useTransform(r1, (r) => 1 - 0.8 * ((r - 110) / 36));
+  const o2 = useTransform(r2, (r) => 1 - 0.8 * ((r - 110) / 36));
+  const box = <circle cx={C} cy={C} r="146" fill="none" />;
+  const spin = (children: ReactNode) => (
+    <motion.g style={{ rotate: angle }}>
+      {box}
+      {children}
+    </motion.g>
+  );
+
+  switch (kind) {
+    case "radar":
+      return spin(<Beam p={p} />);
+    case "twin":
+      return spin(<><Beam p={p} /><Beam p={p} at={180} /></>);
+    case "quad":
+      return spin([0, 90, 180, 270].map((a) => <Beam key={a} p={p} at={a} slices={6} step={3} />));
+    case "comet":
+      // A bright head with a tail of shrinking sparks.
+      return spin(
+        <>
+          {Array.from({ length: 12 }, (_, i) => {
+            const [x, y] = pt(128, -i * 5);
+            return <circle key={i} cx={x} cy={y} r={i === 0 ? 7.5 : 5.8 - i * 0.4} fill={i === 0 ? p.light : p.main} fillOpacity={i === 0 ? 1 : 0.75 - i * 0.055} />;
+          })}
+          <circle cx={C} cy={C - 128} r="14" fill={p.light} fillOpacity="0.22" />
+        </>,
+      );
+    case "loader":
+      // Segmented arc, like a loading spinner, fading toward its tail.
+      return spin(
+        Array.from({ length: 9 }, (_, i) => (
+          <path key={i} d={platePath(122, 140, -i * 13 - 10, -i * 13, 0)} fill={i === 0 ? p.light : p.main} fillOpacity={i === 0 ? 0.95 : 0.8 - i * 0.08} />
+        )),
+      );
+    case "laser":
+      // A thin beam straight across both sides, with a soft glow and no trail.
+      return spin(
+        <>
+          {[0, 180].map((a) => (
+            <g key={a} transform={`rotate(${a} ${C} ${C})`}>
+              <path d={platePath(110, 146, -2.5, 2.5, 0)} fill={p.main} fillOpacity="0.28" />
+              <line x1={C} y1={C - 110} x2={C} y2={C - 146} stroke={p.light} strokeWidth="2" />
+              <circle cx={C} cy={C - 146} r="2.6" fill={p.light} />
+            </g>
+          ))}
+        </>,
+      );
+    case "pulse":
+      return (
+        <>
+          <motion.circle cx={C} cy={C} r={r1} fill="none" stroke={p.light} strokeWidth="4" style={{ strokeOpacity: o1 }} />
+          <motion.circle cx={C} cy={C} r={r2} fill="none" stroke={p.main} strokeWidth="4" style={{ strokeOpacity: o2 }} />
+        </>
+      );
+    case "none":
+      return null;
   }
 }

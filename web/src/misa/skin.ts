@@ -105,14 +105,38 @@ export const CLAMPS = {
   lug: "Round lug",
   prongs: "Twin prongs",
   rune: "Rune tablet",
+  crown: "Crown",
+  hammer: "Hammerhead",
+  shield: "Kite shield",
+  pincer: "Pincer",
+  turbine: "Turbine",
+  ziggurat: "Ziggurat",
+  spear: "Spearhead",
+  knuckle: "Knuckles",
   none: "No clamps",
 };
 
-export const GLYPHS = {
-  greek: { name: "Greek", set: ["Α", "Θ", "Σ", "Ω"] },
-  roman: { name: "Roman", set: ["I", "II", "III", "IV"] },
-  runes: { name: "Runes", set: ["ᚠ", "ᚱ", "ᛉ", "ᛟ"] },
-  misa: { name: "M·I·S·A", set: ["M", "I", "S", "A"] },
+export const ARMS = {
+  claw: "Claw",
+  hydraulic: "Hydraulic",
+  slim: "Slim rods",
+  blade: "Arm blade",
+  cannon: "Arm cannon",
+  tentacle: "Tentacle",
+  magnet: "Magnet",
+  off: "No arms",
+};
+
+/** What sweeps around the dial ring between her eye and the plates. */
+export const SCANNERS = {
+  radar: "Radar sweep",
+  twin: "Twin beams",
+  quad: "Quad beams",
+  comet: "Comet",
+  loader: "Loader arc",
+  laser: "Laser line",
+  pulse: "Pulse rings",
+  none: "Off",
 };
 
 export const IRISES = {
@@ -161,7 +185,9 @@ export type Skin = {
   cog: keyof typeof COGS;
   ring: keyof typeof RINGS;
   clamp: keyof typeof CLAMPS;
-  glyphs: keyof typeof GLYPHS;
+  scanner: keyof typeof SCANNERS;
+  /** The two arms on her sides (collapsed only). */
+  arms: keyof typeof ARMS;
   /** Iris color: "shell" follows the shell color. */
   eye: ColorId | "shell";
   eyeCustom: string;
@@ -174,7 +200,7 @@ export type Skin = {
   coreCustom: string;
 };
 
-export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", cog: "classic", ring: "plates4", clamp: "bracket", glyphs: "greek",
+export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", cog: "classic", ring: "plates4", clamp: "bracket", scanner: "radar", arms: "claw",
   eye: "shell", eyeCustom: "#38bdf8", eye2: "off", iris: "fibers", pupil: "aperture", core: "eye", coreCustom: "#ffffff" };
 
 /** Drops unknown values (e.g. from an older or newer version) back to the default. */
@@ -189,7 +215,8 @@ export function sanitize(s: Partial<Record<keyof Skin, string>> | undefined): Sk
     cog: pick("cog", COGS),
     ring: pick("ring", RINGS),
     clamp: pick("clamp", CLAMPS),
-    glyphs: pick("glyphs", GLYPHS),
+    scanner: pick("scanner", SCANNERS),
+    arms: pick("arms", ARMS),
     eye: s?.eye === "shell" || s?.eye === "custom" ? s.eye : (pick("eye", PALETTES) as Skin["eye"]),
     eyeCustom: hexOr(s?.eyeCustom, DEFAULT_SKIN.eyeCustom),
     eye2: s?.eye2 === "shell" ? "shell" : (pick("eye2", PALETTES) as Skin["eye2"]),
