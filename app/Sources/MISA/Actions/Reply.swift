@@ -22,6 +22,8 @@ struct Reply {
     var outputs: [URL] = []
     /// Where the dropped files are now, after a move, so "this" keeps pointing at them.
     var replacesFiles: [URL]? = nil
+    /// Search results, numbered, so "open 2" or "use 1" can pick one next.
+    var found: [URL]? = nil
 
     var json: [String: Any] {
         var m: [String: Any] = [

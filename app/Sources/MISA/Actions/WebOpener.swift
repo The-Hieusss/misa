@@ -76,6 +76,14 @@ enum WebOpener {
             (["search youtube for ", "youtube search ", "search on youtube for "], "YouTube", "https://www.youtube.com/results?search_query="),
             (["search the web for ", "search google for ", "search online for ", "search for ", "google ", "look up ", "web search "], "Google", "https://www.google.com/search?q="),
         ]
+        // "find lofi on youtube", "play study music on youtube"
+        if lower.hasSuffix(" on youtube"), let lead = ["find me ", "find ", "search for ", "search ", "look up ", "play ", "put on "].first(where: { lower.hasPrefix($0) }) {
+            let q = String(s.dropFirst(lead.count).dropLast(" on youtube".count)).trimmingCharacters(in: .whitespaces)
+            if !q.isEmpty, let enc = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+               let url = URL(string: "https://www.youtube.com/results?search_query=" + enc.replacingOccurrences(of: "&", with: "%26").replacingOccurrences(of: "+", with: "%2B")) {
+                return ("YouTube", q, url)
+            }
+        }
         for e in engines {
             guard let p = e.prefixes.first(where: { lower.hasPrefix($0) }) else { continue }
             var q = String(s.dropFirst(p.count)).trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "?.!")))

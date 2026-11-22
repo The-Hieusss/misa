@@ -8,6 +8,8 @@ final class Brain {
     private var files: [URL] = []
     /// Files the last action produced, for "Show in Finder".
     private var outputs: [URL] = []
+    /// The last file search's results, for "open 2" / "use 1".
+    private var found: [URL] = []
     /// Confirm cards waiting for a click.
     private var pending: [String: Reply.Confirm] = [:]
     private let work = DispatchQueue(label: "misa.actions", qos: .userInitiated)
@@ -29,7 +31,46 @@ final class Brain {
 
     func handle(_ raw: String, done: @escaping (Reply) -> Void) {
         let t = Self.normalize(raw)
-        if let action = route(t, raw: raw) { perform(action, done: done) } else { done(chat(t)) }
+        if let r = AIBrain.toggle(t) { return done(r) }
+        // Exact commands first: instant, and the same every time.
+        if let action = route(t, raw: raw) { return perform(action, done: done) }
+        if has(t, "what can you do", "help", "commands") || t.isEmpty { return done(chat(t)) }
+        if ["never mind", "nevermind", "no", "nope", "cancel", "no thanks"].contains(t) { return done(Reply(text: "Okay, I'll leave it.")) }
+        // Anything else: Apple's on-device model works out what was meant.
+        guard AIBrain.available else { return done(chat(t)) }
+        let files = self.files, timerNow = describeTimer()
+        Task {
+            let outcome = await AIBrain.interpret(raw, files: files, timer: timerNow)
+            await MainActor.run { self.finish(outcome, fallback: t, done: done) }
+        }
+    }
+
+    /// Runs what the AI brain decided, through the same router (and confirm cards) as typed commands.
+    private func finish(_ outcome: AIBrain.Outcome, fallback t: String, done: @escaping (Reply) -> Void) {
+        switch outcome {
+        case .say(let text):
+            done(Reply(text: text))
+        case .failed:
+            done(chat(t))
+        case .command(let command, _):
+            let c = Self.normalize(command)
+            // Quitting has no confirm card of its own, so check first when the model chose it.
+            if c.hasPrefix("quit ") {
+                let what = String(command.dropFirst(5))
+                return done(Reply(text: what == "everything" ? "Quit all your apps?" : "Quit \(what)?",
+                                  suggestions: [.init(label: "Yes, quit", prompt: command), .init(label: "No", prompt: "never mind")]))
+            }
+            if let action = route(c, raw: command) { perform(action, done: done) } else { done(chat(c)) }
+        }
+    }
+
+    /// The timer, in words for the AI brain ("running, 12 min left"), or "" when idle.
+    private func describeTimer() -> String {
+        switch timer.state {
+        case .running: return "\(timer.label) running, \(FocusTimer.describe(timer.remaining)) left"
+        case .paused: return "\(timer.label) paused, \(FocusTimer.describe(timer.remaining)) left"
+        default: return ""
+        }
     }
 
     func filesDropped(_ urls: [URL], done: @escaping (Reply) -> Void) {
@@ -67,6 +108,7 @@ final class Brain {
                 if let c = reply.confirm { self.pending[c.id] = c }
                 if !reply.outputs.isEmpty { self.outputs = reply.outputs }
                 if let moved = reply.replacesFiles { self.files = moved }
+                if let hits = reply.found { self.found = hits }
                 done(reply)
             }
         }
@@ -80,6 +122,20 @@ final class Brain {
 
         // Updating herself: "update yourself", "check for updates", "what version are you"
         if let action = Updater.route(t) { return action }
+
+        // Picking from the last file search: "open 2", "show 3 in finder", "use the first one"
+        if let r = FindFiles.pick(t, from: found) { return { r } }
+        // "open it" / "open them": the file(s) she's holding (found or dropped)
+        if !files.isEmpty, ["open it", "open this", "open that", "open them", "open these", "open those", "open the file", "open the files"].contains(t) {
+            let targets = files
+            return {
+                if targets.count == 1 { return FindFiles.open(targets[0]) }
+                targets.forEach { u in FileOps.onMain { _ = NSWorkspace.shared.open(u) } }
+                return Reply(text: "Opening \(FileOps.plural(targets.count, "file")).")
+            }
+        }
+        // Finding files: "find my resume pdf", "where is homework 6", "find photos from last week"
+        if let q = FindFiles.parse(raw) { return { FindFiles.run(q) } }
 
         if has(t, "show in finder", "reveal", "show me", "open folder") && !outputs.isEmpty {
             let outs = outputs
@@ -197,7 +253,9 @@ final class Brain {
         let mentionsTimer = has(t, "timer", "focus", "pomodoro", "break", "countdown")
             || (has(t, "study", "studying") && FocusTimer.parseDuration(raw) != nil)
 
-        if active && has(t, "time left", "how long left", "how much time", "how much longer", "remaining", "status") {
+        // A question about the timer ("how long till my focus ends") never stops it.
+        let question = ["how ", "when ", "what ", "whats ", "what's ", "is ", "does ", "will "].contains { t.hasPrefix($0) } || raw.contains("?")
+        if active && (has(t, "time left", "how long left", "how much time", "how much longer", "remaining", "status", "how long till", "how long until", "when does", "when will") || question) {
             return { FileOps.onMain {
                 Reply(text: "\(FocusTimer.describe(timer.remaining)) left on your \(timer.label.lowercased()) timer\(timer.state == .paused ? " (paused)" : "").")
             } }
@@ -216,7 +274,7 @@ final class Brain {
                 return Reply(text: "Resumed. \(FocusTimer.describe(timer.remaining)) to go.")
             } }
         }
-        if has(t, "stop", "cancel", "end", "reset", "quit") && (mentionsTimer || active) {
+        if has(t, "stop", "cancel", "end", "reset", "quit") && (mentionsTimer || active) && !question {
             return { FileOps.onMain { () -> Reply in
                 guard active else { return Reply(text: "There's no timer running.") }
                 timer.stop()
@@ -291,9 +349,12 @@ final class Brain {
             • Move a file by name ("move Homework 6.pdf to Downloads"), or undo it
             • Open or quit apps ("open Claude", "quit Spotify")
             • Open websites or search ("open youtube.com", "search for mac shortcuts")
+            • Find files ("find my resume pdf", "find photos from last week"), then open, show or use one
             • Show what's using your disk
             • Show what's in Disposable, or keep a file
             • Update myself from GitHub ("update yourself", "what version are you")
+
+            You don't need the exact words: with Apple Intelligence on, I understand plain English, all on this Mac.
             """, suggestions: Array(Self.starters.dropFirst()))
         }
         if has(t, "time left", "how long left", "how much time") {

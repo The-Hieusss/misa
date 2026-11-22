@@ -2,6 +2,16 @@
 
 A floating assistant for macOS. She sits anywhere on your screen, above every app, and opens into a chat when you click her or press **⌥Space**. Everything runs on your Mac: no account, no API key, no subscription.
 
+## Talk to her normally
+
+With **Apple Intelligence** on (macOS 26), she understands plain English using Apple's on-device model. "Shove that PDF onto my desktop", "I need to grind for an hour", "throw Spotify out", "my disk is almost full" and "I'm turning this in for class" all work. Nothing you type leaves your Mac.
+
+- Exact commands still go straight to her built-in actions, instantly. Only what they don't cover goes to the model.
+- The model can only pick from the things she can actually do. Its choice runs through the same code as a typed command, so risky actions still show a confirm card. Quitting an app it picked asks you first.
+- Greetings, thanks and quick questions get a short answer from the model.
+- "Turn off the AI brain" goes back to exact commands only; "turn on the AI brain" brings it back; "is your AI brain on?" says whether it's running and why not.
+- Without Apple Intelligence (or on macOS 14 and 15) she works as before, with exact commands.
+
 ## What she can do
 
 **Drop files on her**, then pick:
@@ -26,6 +36,7 @@ A floating assistant for macOS. She sits anywhere on your screen, above every ap
 - save new screenshots to `~/Screenshots` instead of the Desktop
 - tidy downloads older than 30 days (moves them to Disposable)
 - move a file by name: "move Homework 6.pdf to Downloads". She finds it with Spotlight and asks which one if several match. Every move shows a confirm card first, and "undo" reverses the last one
+- find files: "find my resume pdf", "where is homework 6", "find photos from last week", "find the zip I downloaded yesterday". Spotlight searches your home folder by name, narrowed by type (PDF, image, video, doc, slides, spreadsheet, folder, zip), date (today, yesterday, this/last week or month) and folder (Downloads, Desktop, Documents). If no name matches, she looks inside files. Results are numbered: "open 2", "show 3 in Finder" or "use 1"; a single result becomes "it", so "move it to Desktop" or "copy the text for AI" work next
 - open apps: "open Claude", "launch Safari and Notes", "open vs code". She looks in Applications, Utilities and the system apps, and understands nicknames like "chrome", "settings" and "word"
 - open websites: "open youtube.com", "go to github.com/apple", or sites she knows by name like "open gmail" or "open youtube and wikipedia" (an app with the same name wins). They open in your default browser
 - search the web: "search for mac shortcuts", "google pomodoro technique", "search youtube for lofi beats"
@@ -142,7 +153,7 @@ install.sh         checks the tools, runs the build, copies the app into Applica
 
 - The web view only **asks** for things through a small set of messages (`web/src/bridge.ts`). Only the Swift side can act on the Mac.
 - The built web files are served from inside the app at `misa://app/`, so nothing loads from the internet.
-- `app/Sources/MISA/Brain.swift` routes requests to actions with keywords for now. Apple's on-device model will plug in there to choose actions.
+- `app/Sources/MISA/Brain.swift` routes requests to actions with keywords. Anything it doesn't recognize goes to `AIBrain.swift`, where Apple's on-device model (Foundation Models, guided generation) fills in a typed `Intent`. That intent becomes a plain command for the same router. The framework is weak-linked, so the app still runs on macOS 14 and 15.
 - Each ability is one file in `app/Sources/MISA/Actions/`.
 
 ### Working on the look

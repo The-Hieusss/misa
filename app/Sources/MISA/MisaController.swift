@@ -82,6 +82,7 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
         // Update notices and failures show up in the chat like any reply (with the unread dot).
         Updater.announce = { [weak self] reply in self?.send(reply.json) }
         Updater.startDailyCheck()
+        AIBrain.prewarm()
     }
 
     /// The web view may only show M.I.S.A.'s own page. Anything else is cancelled,
