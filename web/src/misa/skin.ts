@@ -138,6 +138,22 @@ export const MARKS = {
   binary: "Binary",
 };
 
+/** Something she wears on top of her shell. */
+export const ACCESSORIES = {
+  none: "Nothing",
+  tophat: "Top hat",
+  party: "Party hat",
+  crown: "Crown",
+  flower: "Flower",
+  flowercrown: "Flower crown",
+  bow: "Bow",
+  sprout: "Sprout",
+  antenna: "Antenna",
+  angel: "Angel ring",
+  propeller: "Propeller cap",
+  catears: "Cat ears",
+};
+
 export const ARMS = {
   claw: "Claw",
   hydraulic: "Hydraulic",
@@ -205,6 +221,8 @@ export type Skin = {
   custom: string;
   /** The ring, or a solid shape (the ring, cog, clamp and scanner choices are ring parts). */
   shell: keyof typeof SHELLS;
+  /** What she wears on her head. */
+  accessory: keyof typeof ACCESSORIES;
   /** Engravings on a solid shell's faces. */
   marks: keyof typeof MARKS;
   /** The spinning cog inside the shell. */
@@ -226,7 +244,7 @@ export type Skin = {
   coreCustom: string;
 };
 
-export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", shell: "ring", marks: "none", cog: "classic", ring: "plates4", clamp: "bracket", scanner: "radar", arms: "claw",
+export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", shell: "ring", marks: "none", accessory: "none", cog: "classic", ring: "plates4", clamp: "bracket", scanner: "radar", arms: "claw",
   eye: "shell", eyeCustom: "#38bdf8", eye2: "off", iris: "fibers", pupil: "aperture", core: "eye", coreCustom: "#ffffff" };
 
 /** Drops unknown values (e.g. from an older or newer version) back to the default. */
@@ -240,6 +258,7 @@ export function sanitize(s: Partial<Record<keyof Skin, string>> | undefined): Sk
     custom: hexOr(s?.custom, DEFAULT_SKIN.custom),
     shell: pick("shell", SHELLS),
     marks: pick("marks", MARKS),
+    accessory: pick("accessory", ACCESSORIES),
     cog: pick("cog", COGS),
     ring: pick("ring", RINGS),
     clamp: pick("clamp", CLAMPS),

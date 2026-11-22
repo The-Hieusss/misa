@@ -222,6 +222,10 @@ const SPECS: Record<SolidKind, Spec> = {
 };
 
 export const SOLID_EYE = Object.fromEntries(Object.entries(SPECS).map(([k, s]) => [k, s.eye])) as Record<SolidKind, Spec["eye"]>;
+/** How high each solid reaches on screen when she faces you (halo units): where a hat sits. */
+export const SOLID_TOP = Object.fromEntries(
+  Object.entries(SPECS).map(([k, s]) => [k, Math.min(...s.faces.flatMap((f) => f.pts.map((q) => C + (q[1] * PERSPECTIVE) / (PERSPECTIVE - q[2]))))]),
+) as Record<SolidKind, number>;
 
 /** How many of each drawn piece a kind needs, so the elements never change while animating. */
 const SLOTS = (k: SolidKind) => ({ panels: SPECS[k].faces.length, rims: SPECS[k].window ? 1 : SPECS[k].faces.filter((f) => f.win).length });

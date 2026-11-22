@@ -9,7 +9,7 @@ enum Geometry {
 
     /// Collapsed, the window has room around the halo for her arms (empty space clicks through).
     static let armSide: CGFloat = 90
-    static let armTop: CGFloat = 40
+    static let armTop: CGFloat = 64 // room for her arms and for a hat
     static let armBottom: CGFloat = 50
     static var collapsedSize: NSSize { NSSize(width: halo + armSide * 2, height: halo + armTop + armBottom) }
     /// The halo's top-left inside the collapsed window (web coordinates, y down).

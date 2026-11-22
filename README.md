@@ -67,6 +67,7 @@ Click the palette button in the chat header to open her wardrobe. Every choice s
 | Part | Options |
 |---|---|
 | Color | Ember, Arc reactor, Toxic, Crimson, Void, Brass, Chrome, Sakura, or any custom color (she builds the darker metals and highlights from it) |
+| Accessory | Something on her head: top hat, party hat, crown, flower, flower crown, bow, sprout, antenna, angel ring, propeller cap or cat ears. It sits on top of whichever shell she wears, leans with her, and hops when she spins; the flower and sprout sway, the antenna bobbles, the angel ring floats and the propeller spins |
 | Shell | Armored ring, pyramid, cube, hex prism (an eye in every window), diamond (octahedron), dodeca (dodecahedron), sphere or geodesic. The solids are real 3D shapes: they lean toward the cursor, show their sides as they turn, spin a quarter turn and split apart while she thinks, and keep a window open where her eye looks out |
 | Markings | Symbols engraved on a solid shell's faces: plain, Greek letters, Roman numerals, runes, kanji numerals or binary. A face without a window gets one large symbol; a face with a window gets small ones in its corners |
 | Ring | 4 armor plates, 6 segments, 8 blades, vented band, twin crescents, spiked crown, floating shards, gyro rings, hex frame, sawblade, visor arc, petal plates, chain links, satellite pods, double tier, cross arms |

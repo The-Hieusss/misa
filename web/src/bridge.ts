@@ -98,7 +98,7 @@ function browserFallback(m: ToSwift) {
       emit({ type: "layout", mode: "open", halo: { x: 260, y: 516 }, right: true, bottom: true, arms: { left: true, right: true } });
       break;
     case "close":
-      emit({ type: "layout", mode: "collapsed", halo: { x: 90, y: 40 }, right: true, bottom: true, arms: { left: true, right: true } });
+      emit({ type: "layout", mode: "collapsed", halo: { x: 90, y: 64 }, right: true, bottom: true, arms: { left: true, right: true } });
       break;
     case "ask":
       if (/focus|timer/i.test(m.text)) {
@@ -126,7 +126,7 @@ function browserFallback(m: ToSwift) {
       emit({ type: "layout", mode: "docked", camera: { x: 160, y: 36 }, halo: { x: 0, y: 0 }, right: true, bottom: false });
       break;
     case "undock":
-      emit({ type: "layout", mode: "collapsed", halo: { x: 90, y: 40 }, right: true, bottom: true, arms: { left: true, right: true } });
+      emit({ type: "layout", mode: "collapsed", halo: { x: 90, y: 64 }, right: true, bottom: true, arms: { left: true, right: true } });
       break;
     case "cancel":
       emit({ type: "reply", text: "(browser preview) Okay, I left everything as it was." });

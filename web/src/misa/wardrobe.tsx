@@ -2,11 +2,12 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Check, RotateCcw } from "lucide-react";
 import { useAnimationFrame, useMotionValue, useReducedMotion } from "framer-motion";
-import { ARMS, CLAMPS, DEFAULT_SKIN, IRISES, COGS, MARKS, PALETTES, PUPILS, RINGS, SCANNERS, SHELLS, eyeColors, paletteFor } from "./skin";
+import { ARMS, CLAMPS, DEFAULT_SKIN, IRISES, COGS, ACCESSORIES, MARKS, PALETTES, PUPILS, RINGS, SCANNERS, SHELLS, eyeColors, paletteFor } from "./skin";
 import { IrisPattern, Pupil } from "./eye-parts";
 import type { Palette, Skin } from "./skin";
 import { ArmArt } from "./mecha-arms";
 import { MarkSample, SolidShell } from "./solid-shell";
+import { AccessoryArt } from "./accessory";
 import { C, CLAMP_ART, CogArt, GYRO, RING_SPECS, Scanner, platePath, spikePaths } from "./shell-parts";
 
 /**
@@ -152,6 +153,22 @@ export function Wardrobe({
                 aria-label="Custom color"
               />
             </label>
+          </div>
+        </Section>
+
+        <Section title="Accessory">
+          <div className="grid grid-cols-4 gap-2">
+            {(Object.keys(ACCESSORIES) as Skin["accessory"][]).map((id) => (
+              <Tile key={id} on={draft.accessory === id} onClick={() => set("accessory", id)} label={ACCESSORIES[id]}>
+                <svg viewBox="-75 -118 150 130" className="h-[32px] w-[38px] overflow-visible" aria-hidden>
+                  {id === "none" ? (
+                    <path d="M-40 -50 L40 -50" stroke={p.main} strokeOpacity="0.5" strokeWidth="6" strokeDasharray="10 10" />
+                  ) : (
+                    <AccessoryArt kind={id} p={p} />
+                  )}
+                </svg>
+              </Tile>
+            ))}
           </div>
         </Section>
 

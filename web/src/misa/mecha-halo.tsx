@@ -7,7 +7,8 @@ import { C, CLAMP_ART, CogArt, GYRO, PlatePattern, RING_SPECS, Scanner, arcPath,
 import type { Seg } from "./shell-parts";
 import { cn } from "@/lib/utils";
 import MechaEye from "./mecha-eye";
-import { SOLID_EYE, SolidShell } from "./solid-shell";
+import { SOLID_EYE, SOLID_TOP, SolidShell } from "./solid-shell";
+import Accessory from "./accessory";
 import type { EyeLook } from "./mecha-eye";
 
 const origin = { transformOrigin: `${C}px ${C}px` };
@@ -99,7 +100,10 @@ export default function MechaHalo({
   compact = false,
   surge = 0,
   look,
+  dressed = false,
 }: {
+  /** Wear her accessory (the main halo only, not the small copies). */
+  dressed?: boolean;
   className?: string;
   charged?: boolean;
   /** Small versions: drop fine text and detail that would be illegible. */
@@ -535,6 +539,14 @@ export default function MechaHalo({
             <svg viewBox="0 0 400 400" className="absolute inset-0 h-full w-full overflow-visible">
               <SolidShell kind={solid} p={p} charged={charged} compact={compact} marks={skin.marks} live={{ tiltX, tiltY, spin: shell, push }} />
             </svg>
+          </motion.div>
+        ) : null}
+        {dressed && skin.accessory !== "none" ? (
+          // On top of everything, leaning with her like the rest of the rig.
+          <motion.div className="pointer-events-none absolute inset-0 [transform-style:preserve-3d]" style={{ rotateX: tiltX, rotateY: tiltY, x: shakeX, y: shakeY }}>
+            <Layer z={solid ? 4 : Z.clamps}>
+              <Accessory kind={skin.accessory} p={p} y={solid ? Math.max(SOLID_TOP[solid], 2) + 4 : 14} push={push} />
+            </Layer>
           </motion.div>
         ) : null}
       </div>

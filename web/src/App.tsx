@@ -239,7 +239,7 @@ export default function App() {
   const [layout, setLayout] = useState<Layout>({
     type: "layout",
     mode: "collapsed",
-    halo: { x: 90, y: 40 }, // Geometry.haloInCollapsed
+    halo: { x: 90, y: 64 }, // Geometry.haloInCollapsed
     right: true,
     bottom: true,
     arms: { left: true, right: true },
@@ -789,6 +789,7 @@ export default function App() {
                   />
                   <MechaHalo
                     compact
+                    dressed
                     charged={panelShown || hover}
                     surge={surge}
                     className="relative h-full w-full"
