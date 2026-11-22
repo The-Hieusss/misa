@@ -116,6 +116,14 @@ export const CLAMPS = {
   none: "No clamps",
 };
 
+/** Her body: the classic armored ring, or a solid shape around the eye. */
+export const SHELLS = {
+  ring: "Armored ring",
+  pyramid: "Pyramid",
+  cube: "Cube",
+  sphere: "Sphere",
+};
+
 export const ARMS = {
   claw: "Claw",
   hydraulic: "Hydraulic",
@@ -181,6 +189,8 @@ export type Skin = {
   color: ColorId;
   /** Main color when color is "custom" (#rrggbb). */
   custom: string;
+  /** The ring, or a solid shape (the ring, cog, clamp and scanner choices are ring parts). */
+  shell: keyof typeof SHELLS;
   /** The spinning cog inside the shell. */
   cog: keyof typeof COGS;
   ring: keyof typeof RINGS;
@@ -200,7 +210,7 @@ export type Skin = {
   coreCustom: string;
 };
 
-export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", cog: "classic", ring: "plates4", clamp: "bracket", scanner: "radar", arms: "claw",
+export const DEFAULT_SKIN: Skin = { color: "ember", custom: "#4ade80", shell: "ring", cog: "classic", ring: "plates4", clamp: "bracket", scanner: "radar", arms: "claw",
   eye: "shell", eyeCustom: "#38bdf8", eye2: "off", iris: "fibers", pupil: "aperture", core: "eye", coreCustom: "#ffffff" };
 
 /** Drops unknown values (e.g. from an older or newer version) back to the default. */
@@ -212,6 +222,7 @@ export function sanitize(s: Partial<Record<keyof Skin, string>> | undefined): Sk
   return {
     color: s?.color === "custom" ? "custom" : (pick("color", PALETTES) as ColorId),
     custom: hexOr(s?.custom, DEFAULT_SKIN.custom),
+    shell: pick("shell", SHELLS),
     cog: pick("cog", COGS),
     ring: pick("ring", RINGS),
     clamp: pick("clamp", CLAMPS),

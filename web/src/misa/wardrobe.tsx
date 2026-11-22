@@ -2,14 +2,15 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Check, RotateCcw } from "lucide-react";
 import { useAnimationFrame, useMotionValue, useReducedMotion } from "framer-motion";
-import { ARMS, CLAMPS, DEFAULT_SKIN, IRISES, COGS, PALETTES, PUPILS, RINGS, SCANNERS, eyeColors, paletteFor } from "./skin";
+import { ARMS, CLAMPS, DEFAULT_SKIN, IRISES, COGS, PALETTES, PUPILS, RINGS, SCANNERS, SHELLS, eyeColors, paletteFor } from "./skin";
 import { IrisPattern, Pupil } from "./eye-parts";
 import type { Palette, Skin } from "./skin";
 import { ArmArt } from "./mecha-arms";
+import { SolidShell } from "./solid-shell";
 import { C, CLAMP_ART, CogArt, GYRO, RING_SPECS, Scanner, platePath, spikePaths } from "./shell-parts";
 
 /**
- * Pick her colors, inner cog, ring, clamps, arms and scanner. Every change shows on her right
+ * Pick her colors, shell shape, inner cog, ring, clamps, arms and scanner. Every change shows on her right
  * away (the caller renders the draft); Save keeps it, Cancel puts the old look back.
  */
 export function Wardrobe({
@@ -26,6 +27,9 @@ export function Wardrobe({
   const p = paletteFor(draft);
   const eye = eyeColors(draft, p);
   const set = <K extends keyof Skin>(k: K, v: Skin[K]) => onChange({ ...draft, [k]: v });
+  // Ring parts only show on the ring shell, so picking one switches back to it.
+  const setPart = <K extends "ring" | "cog" | "clamp" | "scanner">(k: K, v: Skin[K]) => onChange({ ...draft, [k]: v, shell: "ring" });
+  const partNote = draft.shell === "ring" ? undefined : "ring shell";
   const [tab, setTab] = useState<"shell" | "eye">("shell");
   // One shared clock turns every scanner preview, at her idle speed.
   const scan = useMotionValue(30);
@@ -151,20 +155,36 @@ export function Wardrobe({
           </div>
         </Section>
 
-        <Section title="Ring">
+        <Section title="Shell">
+          <div className="grid grid-cols-4 gap-2">
+            {(Object.keys(SHELLS) as Skin["shell"][]).map((id) => (
+              <Tile key={id} on={draft.shell === id} onClick={() => set("shell", id)} label={SHELLS[id]}>
+                {id === "ring" ? (
+                  <RingIcon ring={draft.ring} color={p.main} fill={p.plateA} />
+                ) : (
+                  <svg viewBox="-20 -40 440 440" className="h-[34px] w-[34px] overflow-visible" aria-hidden>
+                    <SolidShell kind={id} p={p} compact />
+                  </svg>
+                )}
+              </Tile>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Ring" note={partNote}>
           <div className="grid grid-cols-4 gap-2">
             {(Object.keys(RINGS) as Skin["ring"][]).map((id) => (
-              <Tile key={id} on={draft.ring === id} onClick={() => set("ring", id)} label={RINGS[id]}>
+              <Tile key={id} on={draft.ring === id} onClick={() => setPart("ring", id)} label={RINGS[id]}>
                 <RingIcon ring={id} color={p.main} fill={p.plateA} />
               </Tile>
             ))}
           </div>
         </Section>
 
-        <Section title="Inner cog">
+        <Section title="Inner cog" note={partNote}>
           <div className="grid grid-cols-4 gap-2">
             {(Object.keys(COGS) as Skin["cog"][]).map((id) => (
-              <Tile key={id} on={draft.cog === id} onClick={() => set("cog", id)} label={COGS[id]}>
+              <Tile key={id} on={draft.cog === id} onClick={() => setPart("cog", id)} label={COGS[id]}>
                 {/* a zoomed slice of the top of the cog */}
                 <svg viewBox={`${C - 24} 39.5 48 25.7`} className="h-[30px] w-[56px]" aria-hidden>
                   <CogArt kind={id} p={p} />
@@ -174,10 +194,10 @@ export function Wardrobe({
           </div>
         </Section>
 
-        <Section title="Clamps">
+        <Section title="Clamps" note={partNote}>
           <div className="grid grid-cols-4 gap-2">
             {(Object.keys(CLAMPS) as Skin["clamp"][]).map((id) => (
-              <Tile key={id} on={draft.clamp === id} onClick={() => set("clamp", id)} label={CLAMPS[id]}>
+              <Tile key={id} on={draft.clamp === id} onClick={() => setPart("clamp", id)} label={CLAMPS[id]}>
                 <svg viewBox={`${C - 18} -3 36 48`} className="h-[34px] w-[26px]" aria-hidden>
                   {id === "none" ? (
                     <path d={`M${C - 9} 4 H${C + 9} V40 H${C - 9} Z`} fill="none" stroke={p.main} strokeOpacity="0.5" strokeWidth="1.4" strokeDasharray="3 3" />
@@ -213,10 +233,10 @@ export function Wardrobe({
           </div>
         </Section>
 
-        <Section title="Scanner">
+        <Section title="Scanner" note={partNote}>
           <div className="grid grid-cols-4 gap-2">
             {(Object.keys(SCANNERS) as Skin["scanner"][]).map((id) => (
-              <Tile key={id} on={draft.scanner === id} onClick={() => set("scanner", id)} label={SCANNERS[id]}>
+              <Tile key={id} on={draft.scanner === id} onClick={() => setPart("scanner", id)} label={SCANNERS[id]}>
                 {/* the dial band, in her light color so it reads at tile size */}
                 <svg viewBox={`${C - 149} ${C - 149} 298 298`} className="h-[34px] w-[34px]" aria-hidden>
                   <circle cx={C} cy={C} r="146" fill={p.ink} stroke={p.main} strokeOpacity="0.4" strokeWidth="5" />
@@ -262,10 +282,13 @@ export function Wardrobe({
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
     <section>
-      <h3 className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember">{title}</h3>
+      <h3 className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember">
+        {title}
+        {note ? <span className="ml-2 normal-case tracking-normal text-dim">· {note}</span> : null}
+      </h3>
       {children}
     </section>
   );

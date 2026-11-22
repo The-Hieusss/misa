@@ -67,6 +67,7 @@ Click the palette button in the chat header to open her wardrobe. Every choice s
 | Part | Options |
 |---|---|
 | Color | Ember, Arc reactor, Toxic, Crimson, Void, Brass, Chrome, Sakura, or any custom color (she builds the darker metals and highlights from it) |
+| Shell | Armored ring, pyramid, cube or sphere. The solids are real 3D shapes: they lean toward the cursor, show their sides as they turn, spin a quarter turn and split apart while she thinks, and keep a window open where her eye looks out |
 | Ring | 4 armor plates, 6 segments, 8 blades, vented band, twin crescents, spiked crown, floating shards, gyro rings, hex frame, sawblade, visor arc, petal plates, chain links, satellite pods, double tier, cross arms |
 | Inner cog | The ring that spins inside her shell: classic teeth, honeycomb, carbon weave, circuit traces, hazard stripes, bearing dots, topographic, Greek key |
 | Clamps | Bracket, talon claw, piston, arrow fin, round lug, twin prongs, rune tablet, crown, hammerhead, kite shield, pincer, turbine, ziggurat, spearhead, knuckles, none |
@@ -86,6 +87,8 @@ The **Eye** tab changes her eye on its own:
 | Center light | Match the iris, any theme color, or a custom color |
 
 Every pupil still dilates, spins up when she's charged, and blinks. Eye parts live in `web/src/misa/eye-parts.tsx`.
+
+Ring, inner cog, clamps and scanner are parts of the armored ring, so picking one switches back to it. The solid shells live in `web/src/misa/solid-shell.tsx`.
 
 The color recolors the chat and the menu-bar camera too. Parts live in `web/src/misa/skin.ts` (catalog) and `shell-parts.tsx` (geometry, including `CogArt`), so adding a new one is a single entry.
 

@@ -7,6 +7,7 @@ import { C, CLAMP_ART, CogArt, GYRO, PlatePattern, RING_SPECS, Scanner, arcPath,
 import type { Seg } from "./shell-parts";
 import { cn } from "@/lib/utils";
 import MechaEye from "./mecha-eye";
+import { SOLID_EYE, SolidShell } from "./solid-shell";
 import type { EyeLook } from "./mecha-eye";
 
 const origin = { transformOrigin: `${C}px ${C}px` };
@@ -116,6 +117,10 @@ export default function MechaHalo({
   const heat = charged ? 1 : 0;
   const fade = { transition: "stroke-opacity 300ms, stroke 300ms" };
   const reduce = useReducedMotion();
+  // A solid shell (pyramid, cube, sphere) replaces the ring, cog, dial and clamps.
+  const solid = skin.shell === "ring" ? null : skin.shell;
+  const eyeAt = solid ? SOLID_EYE[solid] : null;
+  const eyeScale = eyeAt ? `translate(${C} ${C}) scale(${eyeAt.scale}) translate(${-C} ${-C})` : undefined;
 
   const orbit = useMotionValue(0);
   const gear = useMotionValue(0);
@@ -258,10 +263,16 @@ export default function MechaHalo({
           </Layer>
 
           {/* ── eye, recessed in its socket ── */}
-          <Layer z={Z.eye}>
-            <circle cx={C} cy={C} r="104" fill={p.ink} />
-            <MechaEye cx={C} cy={C} charged={charged} look={look} />
+          <Layer z={eyeAt ? eyeAt.z : Z.eye}>
+            {eyeAt ? <circle cx={C} cy={C} r={eyeAt.socket} fill={p.socket} /> : null}
+            <g transform={eyeScale}>
+              <circle cx={C} cy={C} r="104" fill={p.ink} />
+              <MechaEye cx={C} cy={C} charged={charged} look={look} />
+            </g>
           </Layer>
+
+          {solid ? null : (
+          <>
 
           {/* ── collar: heat-sink fins + bolted bezel ring (open in the middle) ── */}
           <Layer z={Z.collar}>
@@ -516,7 +527,16 @@ export default function MechaHalo({
               ))}
             </Layer>
           )}
+          </>
+          )}
         </motion.div>
+        {solid ? (
+          <motion.div className="pointer-events-none absolute inset-0" style={{ x: shakeX, y: shakeY }}>
+            <svg viewBox="0 0 400 400" className="absolute inset-0 h-full w-full overflow-visible">
+              <SolidShell kind={solid} p={p} charged={charged} compact={compact} live={{ tiltX, tiltY, spin: shell, push }} />
+            </svg>
+          </motion.div>
+        ) : null}
       </div>
     </div>
   );
