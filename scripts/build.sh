@@ -48,6 +48,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>M.I.S.A. connects and disconnects your paired Bluetooth devices when you ask her to.</string>
   <key>NSAppleEventsUsageDescription</key><string>M.I.S.A. asks Finder to empty the Trash when you tell her to.</string>
 </dict>
 </plist>

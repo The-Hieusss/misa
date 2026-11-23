@@ -137,6 +137,9 @@ final class Brain {
         // Finding files: "find my resume pdf", "where is homework 6", "find photos from last week"
         if let q = FindFiles.parse(raw) { return { FindFiles.run(q) } }
 
+        // Control Center: volume, mic, brightness, sound devices, Bluetooth, Do Not Disturb
+        if let action = SystemControls.route(t, raw: raw) { return action }
+
         if has(t, "show in finder", "reveal", "show me", "open folder") && !outputs.isEmpty {
             let outs = outputs
             return { FileOps.onMain { NSWorkspace.shared.activateFileViewerSelecting(outs) }; return Reply(text: "Opened in Finder.") }
@@ -351,6 +354,8 @@ final class Brain {
             • Open websites or search ("open youtube.com", "search for mac shortcuts")
             • Find files ("find my resume pdf", "find photos from last week"), then open, show or use one
             • Show what's using your disk
+            • Control Center: volume ("volume 40", "mute"), mic ("mute my mic"), brightness ("dim the screen"), \
+            sound devices ("switch output to AirPods"), Bluetooth ("connect to Home Speaker"), Do Not Disturb
             • Show what's in Disposable, or keep a file
             • Update myself from GitHub ("update yourself", "what version are you")
 

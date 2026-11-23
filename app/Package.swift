@@ -13,6 +13,8 @@ let package = Package(
                 .linkedFramework("WebKit"),
                 .linkedFramework("Carbon"),
                 .linkedFramework("ServiceManagement"),
+                .linkedFramework("CoreAudio"),
+                .linkedFramework("IOBluetooth"),
             ]
         )
     ]

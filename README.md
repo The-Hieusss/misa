@@ -43,6 +43,13 @@ With **Apple Intelligence** on (macOS 26), she understands plain English using A
 - quit apps: "quit Spotify", "close Safari and Notes". Apps quit the normal way, so anything with unsaved work asks first. "Quit everything" lists the open apps on a confirm card first
 - empty the Trash: "empty the trash", "take out the trash". She lists what's in it first and only empties it when you click the card. Finder does the emptying, so macOS asks once to let her control Finder
 - show what's using your disk (read-only)
+- work Control Center:
+  - volume: "volume 40", "turn it up", "volume down 10", "mute", "unmute", "what's the volume"
+  - microphone: "mute my mic", "unmute my mic" (back to its old level)
+  - brightness of the built-in screen: "brightness 70", "dim the screen", "brighter". macOS has no public brightness API, so she uses the one the brightness keys use (DisplayServices); external monitors aren't supported
+  - sound devices: "switch output to AirPods", "use the MacBook Pro mic", "list sound devices"
+  - Bluetooth: "connect to Home Speaker", "disconnect my headphones", "list bluetooth devices", "turn Bluetooth on". Only paired devices, matched by name; macOS asks once whether she may use Bluetooth. Turning Bluetooth off shows a confirm card, since a Bluetooth keyboard or mouse would stop working. AirPlay speakers (like a HomePod) can't be picked by apps; use Control Center > Sound for those
+  - Do Not Disturb: "turn on do not disturb", "dnd off". macOS has no API for Focus, so the first time she makes two small Shortcuts ("MISA Do Not Disturb On" and "Off") and Shortcuts asks you to add them. She can't tell whether it's on
 - show what's in Disposable, or "keep" a file from it
 
 You can drag photos and videos straight from the Photos app too. She asks Photos for the original file (not the preview it also sends) and saves it to `~/Downloads/From Photos` first.

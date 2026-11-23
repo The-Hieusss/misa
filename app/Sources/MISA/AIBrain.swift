@@ -98,6 +98,11 @@ enum IntentAction: String, CaseIterable {
     case tidyScreenshots, trashOldScreenshots, screenshotsToFolder, tidyDownloads, diskUsage, emptyTrash
     case findFiles
     case putAway, checkForUpdates, version
+    case setVolume, volumeUp, volumeDown, mute, unmute, muteMic, unmuteMic
+    case setBrightness, brightnessUp, brightnessDown
+    case switchSoundOutput, switchMicrophone, listSoundDevices
+    case connectBluetooth, disconnectBluetooth, bluetoothOn, bluetoothOff
+    case doNotDisturbOn, doNotDisturbOff
 }
 
 struct Intent {
@@ -105,6 +110,7 @@ struct Intent {
     var items: [String]
     var query: String
     var minutes: Int
+    var level: Int
     var destination: String
     var reply: String
 
@@ -122,6 +128,8 @@ struct Intent {
               schema: text),
             P(name: "minutes", description: "Minutes for a focus session, break or timer. 0 if not said.",
               schema: DynamicGenerationSchema(type: Int.self)),
+            P(name: "level", description: "Percent 0-100 for setVolume or setBrightness, or how much to change it for up/down. -1 if not said.",
+              schema: DynamicGenerationSchema(type: Int.self)),
             P(name: "destination", description: "Destination folder for moving or copying files, like Desktop or Documents. Empty if none.",
               schema: text),
             P(name: "reply", description: "For chat: your answer, one or two short sentences. Otherwise a few words, never claiming it's done.",
@@ -137,6 +145,7 @@ struct Intent {
         items = (try? c.value([String].self, forProperty: "items")) ?? []
         query = (try? c.value(String.self, forProperty: "query")) ?? ""
         minutes = (try? c.value(Int.self, forProperty: "minutes")) ?? 0
+        level = (try? c.value(Int.self, forProperty: "level")) ?? -1
         destination = (try? c.value(String.self, forProperty: "destination")) ?? ""
         reply = (try? c.value(String.self, forProperty: "reply")) ?? ""
     }
@@ -170,6 +179,14 @@ final class Engine: @unchecked Sendable {
     "how long till my focus ends" -> timeLeft
     "where did I save my resume" -> findFiles, query "resume"
     "that pdf I downloaded yesterday" -> findFiles, query "pdf downloaded yesterday"
+    "it's way too loud" -> volumeDown
+    "I can barely hear anything" -> volumeUp
+    "half volume" -> setVolume, level 50
+    "it's too dark, I can't see my screen" -> brightnessUp
+    "I'm on a call, kill my mic" -> muteMic
+    "play it on my AirPods" -> switchSoundOutput, items ["AirPods"]
+    "hook up my home speaker" -> connectBluetooth, items ["Home Speaker"]
+    "no notifications for a while" -> doNotDisturbOn
     """
 
     private func current() -> LanguageModelSession {
@@ -197,8 +214,8 @@ final class Engine: @unchecked Sendable {
         do {
             let started = Date()
             let intent = try await respond(prompt)
-            FileOps.log("ai: “\(text.prefix(80))” → \(intent.action.rawValue) items=\(intent.items) q=\(intent.query) min=\(intent.minutes) dest=\(intent.destination) (\(String(format: "%.1f", Date().timeIntervalSince(started)))s)")
-            return Self.outcome(intent, files: files)
+            FileOps.log("ai: “\(text.prefix(80))” → \(intent.action.rawValue) items=\(intent.items) q=\(intent.query) min=\(intent.minutes) lvl=\(intent.level) dest=\(intent.destination) (\(String(format: "%.1f", Date().timeIntervalSince(started)))s)")
+            return Self.outcome(Self.safeLevels(intent, text: text), files: files)
         } catch {
             FileOps.log("ai: failed: \(error)")
             reset()
@@ -216,6 +233,33 @@ final class Engine: @unchecked Sendable {
             reset()
             return try Intent(await current().respond(to: prompt, schema: Intent.schema, options: options).content)
         }
+    }
+
+    /// The model sometimes turns "it's too loud" into "volume 100" or "volume down 100". A level
+    /// only stands when the request gives one (a number, half, all the way...); otherwise it's a
+    /// normal step in the direction asked.
+    private static func safeLevels(_ i: Intent, text: String) -> Intent {
+        let volume: Set<IntentAction> = [.setVolume, .volumeUp, .volumeDown]
+        let bright: Set<IntentAction> = [.setBrightness, .brightnessUp, .brightnessDown]
+        guard volume.contains(i.action) || bright.contains(i.action) else { return i }
+        let t = text.lowercased()
+        let isVolume = volume.contains(i.action)
+        var out = i
+        if t.range(of: "[0-9]", options: .regularExpression) != nil { return i }
+        let says = { (words: [String]) in words.contains { t.contains($0) } }
+        let downward = says(["down", "lower", "less", "dim", "darker", "quieter", "softer", "too loud", "too bright", "blinding", "blasting"])
+        if says(["half"]) { out.action = isVolume ? .setVolume : .setBrightness; out.level = 50; return out }
+        if says(["max", "full", "all the way", "maximum", "highest", "lowest", "minimum", "zero", "silent"]) {
+            out.action = isVolume ? .setVolume : .setBrightness
+            out.level = says(["lowest", "minimum", "zero", "silent"]) || (says(["all the way"]) && downward) ? 0 : 100
+            return out
+        }
+        out.level = -1
+        if i.action == .setVolume || i.action == .setBrightness {
+            let lower = downward && !says(["too quiet", "too dim", "too dark", "can't hear", "cant hear", "barely"])
+            out.action = isVolume ? (lower ? .volumeDown : .volumeUp) : (lower ? .brightnessDown : .brightnessUp)
+        }
+        return out
     }
 
     /// The intent as a command the keyword router understands.
@@ -279,6 +323,25 @@ final class Engine: @unchecked Sendable {
         case .putAway: return cmd("put away")
         case .checkForUpdates: return cmd("check for updates")
         case .version: return cmd("what version are you")
+        case .setVolume: return i.level >= 0 ? cmd("set volume to \(min(100, i.level))") : cmd("what's the volume")
+        case .volumeUp: return cmd(i.level > 0 ? "volume up \(min(100, i.level))" : "volume up")
+        case .volumeDown: return cmd(i.level > 0 ? "volume down \(min(100, i.level))" : "volume down")
+        case .mute: return cmd("mute")
+        case .unmute: return cmd("unmute")
+        case .muteMic: return cmd("mute my mic")
+        case .unmuteMic: return cmd("unmute my mic")
+        case .setBrightness: return i.level >= 0 ? cmd("set brightness to \(min(100, i.level))") : cmd("brightness")
+        case .brightnessUp: return cmd(i.level > 0 ? "brightness up \(min(100, i.level))" : "brightness up")
+        case .brightnessDown: return cmd(i.level > 0 ? "brightness down \(min(100, i.level))" : "brightness down")
+        case .switchSoundOutput: return items.isEmpty ? cmd("list sound devices") : cmd("switch output to \(items[0])")
+        case .switchMicrophone: return items.isEmpty ? cmd("list sound devices") : cmd("switch input to \(items[0])")
+        case .listSoundDevices: return cmd("list sound devices")
+        case .connectBluetooth: return items.isEmpty ? cmd("list bluetooth devices") : cmd("connect to \(items[0])")
+        case .disconnectBluetooth: return items.isEmpty ? cmd("list bluetooth devices") : cmd("disconnect \(items[0])")
+        case .bluetoothOn: return cmd("turn bluetooth on")
+        case .bluetoothOff: return cmd("turn bluetooth off")
+        case .doNotDisturbOn: return cmd("turn on do not disturb")
+        case .doNotDisturbOff: return cmd("turn off do not disturb")
         }
     }
 
