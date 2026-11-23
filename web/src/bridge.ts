@@ -56,6 +56,7 @@ export type FromSwift =
   | { type: "teleportOut" } // play the teleport-out, then reply "teleportedOut"
   | { type: "retract" } // pull the camera up into the menu bar, then reply "undock"
   | { type: "toggle" } // global shortcut pressed
+  | { type: "voice"; state: "listening" | "heard" | "idle"; text: string } // "Hey MISA": what she's hearing
   | { type: "skin"; skin: Partial<Record<keyof Skin, string>> }; // her saved outfit, sent on "ready"
 
 type Handler = { postMessage(m: unknown): void };
@@ -101,6 +102,13 @@ function browserFallback(m: ToSwift) {
       emit({ type: "layout", mode: "collapsed", halo: { x: 90, y: 64 }, right: true, bottom: true, arms: { left: true, right: true } });
       break;
     case "ask":
+      if (/^hey misa/i.test(m.text)) {
+        // Preview the "Hey MISA" strip: words arriving, then the request.
+        const words = m.text.replace(/^hey misa,?\s*/i, "").split(" ");
+        words.forEach((_, i) => emit({ type: "voice", state: "listening", text: words.slice(0, i).join(" ") }));
+        setTimeout(() => window.misa?.receive({ type: "voice", state: "heard", text: words.join(" ") }), 1600);
+        break;
+      }
       if (/focus|timer/i.test(m.text)) {
         emit({ type: "timer", state: "running", label: "Focus", total: 90, remaining: 90, endsAt: Date.now() + 90_000 });
         emit({ type: "reply", text: "(browser preview) Focus timer started: 1 min 30 sec." });

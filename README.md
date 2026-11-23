@@ -12,6 +12,16 @@ With **Apple Intelligence** on (macOS 26), she understands plain English using A
 - "Turn off the AI brain" goes back to exact commands only; "turn on the AI brain" brings it back; "is your AI brain on?" says whether it's running and why not.
 - Without Apple Intelligence (or on macOS 14 and 15) she works as before, with exact commands.
 
+## "Hey MISA"
+
+Turn on **Listen for “Hey MISA”** in her menu bar menu (or say "start listening" in the chat), then say "Hey MISA" and what you need: "Hey MISA, mute my mic", "Hey MISA, find my resume". She opens the chat, shows what she hears, and answers like a typed request. "Hey MISA" on its own opens the chat and waits a few seconds for the request.
+
+- It's off until you turn it on. The first time, macOS asks for the microphone and for speech recognition.
+- Everything stays on your Mac: Apple's built-in sound classifier only checks whether someone is talking, and only then does on-device speech recognition look for her name. Nothing is sent anywhere.
+- macOS shows its orange mic dot while she listens. She pauses while she's put away or hidden and while the screen is locked.
+- "Stop listening" (typed or said) turns it off; "are you listening?" says whether she is.
+- Apps can't use the low-power chip Siri listens on, so this uses a little more battery than "Hey Siri", mostly while people are talking nearby.
+
 ## What she can do
 
 **Drop files on her**, then pick:

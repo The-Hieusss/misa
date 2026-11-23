@@ -120,6 +120,9 @@ final class Brain {
     private func route(_ t: String, raw: String) -> (() -> Reply)? {
         let files = self.files
 
+        // "Hey MISA": "start listening", "stop listening", "are you listening"
+        if let r = VoiceListener.route(t) { return { r } }
+
         // Updating herself: "update yourself", "check for updates", "what version are you"
         if let action = Updater.route(t) { return action }
 
@@ -357,6 +360,7 @@ final class Brain {
             • Control Center: volume ("volume 40", "mute"), mic ("mute my mic"), brightness ("dim the screen"), \
             sound devices ("switch output to AirPods"), Bluetooth ("connect to Home Speaker"), Do Not Disturb
             • Show what's in Disposable, or keep a file
+            • Listen for “Hey MISA” ("start listening", "stop listening")
             • Update myself from GitHub ("update yourself", "what version are you")
 
             You don't need the exact words: with Apple Intelligence on, I understand plain English, all on this Mac.

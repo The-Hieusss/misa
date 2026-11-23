@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, PointerEvent as ReactPointerEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { ArrowUpToLine, Palette, Send, X } from "lucide-react";
+import { ArrowUpToLine, Mic, Palette, Send, X } from "lucide-react";
 import MechaHalo from "./misa/mecha-halo";
 import MechaArms from "./misa/mecha-arms";
 import { HudCorners } from "./misa/hud-corners";
@@ -248,6 +248,9 @@ export default function App() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [thinking, setThinking] = useState(false);
   const [input, setInput] = useState("");
+  /** "Hey MISA": what she's hearing right now (null when she isn't). */
+  const [voice, setVoice] = useState<string | null>(null);
+  const askRef = useRef<(q: string) => void>(() => {});
   const [surge, setSurge] = useState(0);
   const [hover, setHover] = useState(false);
   const [timer, setTimer] = useState<TimerState>({
@@ -359,6 +362,13 @@ export default function App() {
             if (panelShown) requestClose();
             else requestOpen();
             break;
+          case "voice":
+            if (m.state === "listening") setVoice(m.text);
+            else {
+              setVoice(null);
+              if (m.state === "heard" && m.text.trim()) askRef.current(m.text);
+            }
+            break;
         }
       }),
     [panelShown, pushBot, reduce, requestClose, requestOpen],
@@ -408,6 +418,8 @@ export default function App() {
     askedAt.current = performance.now();
     send({ type: "ask", text });
   };
+
+  askRef.current = ask;
 
   const answerConfirm = (id: string, ok: boolean) => {
     if (ok) {
@@ -664,6 +676,27 @@ export default function App() {
                           ))}
                         </div>
                       ) : null}
+
+                      {/* "Hey MISA": what she's hearing */}
+                      <AnimatePresence>
+                        {voice !== null ? (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="relative flex items-center gap-2.5 overflow-hidden border-t border-ember/30 bg-ember/10 px-4 py-2.5"
+                            aria-live="polite"
+                          >
+                            <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+                              <span className="absolute inset-0 animate-ping rounded-full bg-ember/40" />
+                              <Mic className="relative h-4 w-4 text-peach" />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate font-mono text-sm text-cream">
+                              {voice || <span className="text-dim">Listening…</span>}
+                            </span>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
 
                       {/* input */}
                       <form

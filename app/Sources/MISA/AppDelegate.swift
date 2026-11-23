@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var visibilityItem: NSMenuItem!
     private var dockItem: NSMenuItem!
     private var loginItem: NSMenuItem!
+    private var listenItem: NSMenuItem!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller = MisaController()
@@ -70,6 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(visibilityItem)
         menu.addItem(NSMenuItem(title: "Reset Position", action: #selector(resetPosition), keyEquivalent: ""))
         menu.addItem(.separator())
+        listenItem = NSMenuItem(title: "Listen for “Hey MISA”", action: #selector(toggleListening), keyEquivalent: "")
+        menu.addItem(listenItem)
         loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
         menu.addItem(loginItem)
         menu.delegate = self
@@ -116,6 +119,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func resetPosition() { controller.resetPosition() }
+
+    @objc private func toggleListening() {
+        VoiceListener.shared.setEnabled(!VoiceListener.shared.enabled)
+        listenItem.state = VoiceListener.shared.enabled ? .on : .off
+    }
 
     @objc private func quit() { NSApp.terminate(nil) }
 
@@ -164,5 +172,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 
 extension AppDelegate: NSMenuDelegate {
     /// The user can also change it in System Settings, so check each time the menu opens.
-    func menuWillOpen(_ menu: NSMenu) { refreshLoginItem() }
+    func menuWillOpen(_ menu: NSMenu) {
+        refreshLoginItem()
+        listenItem?.state = VoiceListener.shared.enabled ? .on : .off
+    }
 }

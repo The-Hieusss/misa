@@ -83,6 +83,25 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
         Updater.announce = { [weak self] reply in self?.send(reply.json) }
         Updater.startDailyCheck()
         AIBrain.prewarm()
+
+        // "Hey MISA": she comes out with the chat open and shows what she hears; the request
+        // goes through the page like a typed one.
+        VoiceListener.shared.onEvent = { [weak self] event in
+            guard let self else { return }
+            switch event {
+            case .awake(let text):
+                if !self.panel.isVisible { self.show() }
+                if self.mode == .collapsed { self.setOpen() }
+                self.send(["type": "voice", "state": "listening", "text": text])
+            case .heard(let text):
+                self.send(["type": "voice", "state": "heard", "text": text])
+            case .sleep:
+                self.send(["type": "voice", "state": "idle", "text": ""])
+            case .problem(let message):
+                self.send(Reply(text: message).json)
+            }
+        }
+        VoiceListener.shared.restore()
     }
 
     /// The web view may only show M.I.S.A.'s own page. Anything else is cancelled,
@@ -117,9 +136,13 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
 
     // MARK: Showing, hiding, opening
 
-    func show() { panel.orderFrontRegardless() }
+    func show() {
+        panel.orderFrontRegardless()
+        VoiceListener.shared.resume("hidden")
+    }
 
     func hide() {
+        VoiceListener.shared.pause("hidden")
         if mode == .open { setCollapsed() }
         panel.orderOut(nil)
     }
@@ -171,6 +194,7 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
     }
 
     private func enterDocked() {
+        VoiceListener.shared.pause("docked")
         pendingDock = false
         mode = .docked
         openLayout = nil
@@ -209,6 +233,7 @@ final class MisaController: NSObject, WKScriptMessageHandler, WKNavigationDelega
     private func finishUndock() {
         guard mode == .docked else { return }
         UserDefaults.standard.set(false, forKey: "docked")
+        VoiceListener.shared.resume("docked")
         panel.level = .floating
         panel.ignoresMouseEvents = false
         onDockedChange?(false)
