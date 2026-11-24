@@ -82,7 +82,9 @@ if pgrep -xq MISA; then
 fi
 say "Installing to $DEST"
 rm -rf "$DEST"
-cp -R "$HERE/build/$NAME" "$DEST"
+# From the signed copy outside this folder (see scripts/build.sh), without extended attributes.
+ditto --noextattr --noqtn "${MISA_STAGE:-$HOME/Library/Caches/app.misa.build}/$NAME" "$DEST"
+codesign --verify --strict "$DEST" || fail "The installed app's signature didn't check out. Run ./install.sh again."
 # A ZIP downloaded from GitHub is quarantined, which would make macOS refuse to open the app.
 xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
 

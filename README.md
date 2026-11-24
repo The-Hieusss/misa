@@ -175,8 +175,10 @@ Options: `INSTALL_DIR=~/Applications ./install.sh` to choose the folder, `OPEN=0
 
 ```bash
 scripts/build.sh
-open "build/M.I.S.A..app"
+open ~/Library/Caches/app.misa.build/M.I.S.A..app
 ```
+
+The app is put together and signed in `~/Library/Caches/app.misa.build/`, outside the repo: if the repo is in iCloud Drive (a synced Desktop or Documents folder), iCloud tags new files and code signing fails now and then. `build/M.I.S.A..app` is a copy for convenience.
 
 ## How it's put together
 

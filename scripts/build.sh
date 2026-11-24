@@ -2,7 +2,12 @@
 # Builds the web UI, then the Swift app, and bundles both into build/M.I.S.A..app
 set -e
 ROOT="${0:A:h:h}"
-APP="$ROOT/build/M.I.S.A..app"
+OUT="$ROOT/build/M.I.S.A..app"
+# The app is put together and signed outside this folder: if it's in iCloud Drive (Desktop or
+# Documents syncing), iCloud tags new files a moment after they're written, and codesign refuses
+# them ("resource fork, Finder information, or similar detritus") about one build in three.
+STAGE="${MISA_STAGE:-$HOME/Library/Caches/app.misa.build}"
+APP="$STAGE/M.I.S.A..app"
 
 echo "→ Building web UI"
 cd "$ROOT/web"
@@ -30,8 +35,8 @@ BIN="$(swift build -c release "${FLAGS[@]}" --show-bin-path)/MISA"
 echo "→ Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/MISA"
-cp -R "$ROOT/web/dist" "$APP/Contents/Resources/web"
+cp -X "$BIN" "$APP/Contents/MacOS/MISA"
+ditto --noextattr --noqtn "$ROOT/web/dist" "$APP/Contents/Resources/web"
 
 cat > "$APP/Contents/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -72,4 +77,10 @@ plutil -replace MISABuildPath -string "$(dirname "$(command -v "$JS" 2>/dev/null
 # codesign refuses a bundle that has picked any up ("resource fork ... detritus not allowed").
 xattr -cr "$APP"
 codesign --force --sign - "$APP" >/dev/null
-echo "✓ Built $APP"
+codesign --verify --strict "$APP"
+
+# A copy in build/ for running it straight from here (install.sh installs from the signed one).
+rm -rf "$OUT"
+mkdir -p "${OUT:h}"
+ditto --noextattr --noqtn "$APP" "$OUT"
+echo "✓ Built $OUT"
