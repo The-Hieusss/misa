@@ -12,6 +12,8 @@ final class Brain {
     private var found: [URL] = []
     /// Confirm cards waiting for a click.
     private var pending: [String: Reply.Confirm] = [:]
+    /// Multi-step requests that stopped at a confirm card: the steps left, by card id.
+    private var afterConfirm: [String: [String]] = [:]
     private let work = DispatchQueue(label: "misa.actions", qos: .userInitiated)
     let timer: FocusTimer
     /// Asks the window to put her away into the menu bar.
@@ -32,6 +34,13 @@ final class Brain {
     func handle(_ raw: String, done: @escaping (Reply) -> Void) {
         let t = Self.normalize(raw)
         if let r = AIBrain.toggle(t) { return done(r) }
+        // "Mute my mic and dim the screen": one step at a time, in order.
+        if let steps = steps(in: raw, t: t) { return runSteps(steps, results: [], done: done) }
+        handleOne(raw, done: done)
+    }
+
+    private func handleOne(_ raw: String, done: @escaping (Reply) -> Void) {
+        let t = Self.normalize(raw)
         // Exact commands first: instant, and the same every time.
         if let action = route(t, raw: raw) { return perform(action, done: done) }
         if has(t, "what can you do", "help", "commands") || t.isEmpty { return done(chat(t)) }
@@ -80,12 +89,65 @@ final class Brain {
 
     func confirm(_ id: String, done: @escaping (Reply) -> Void) {
         guard let c = pending.removeValue(forKey: id) else { return done(Reply(text: "That request expired. Ask me again.")) }
-        perform(c.run, done: done)
+        let rest = afterConfirm.removeValue(forKey: id) ?? []
+        perform(c.run) { reply in
+            if rest.isEmpty { return done(reply) }
+            self.runSteps(rest, results: [reply], done: done)
+        }
     }
 
     func cancel(_ id: String, done: @escaping (Reply) -> Void) {
         pending[id] = nil
-        done(Reply(text: "Okay, I left everything as it was."))
+        let stopped = afterConfirm.removeValue(forKey: id) != nil
+        done(Reply(text: "Okay, I left everything as it was\(stopped ? " and stopped there" : "")."))
+    }
+
+    // MARK: Multi-step requests
+
+    /// The separate requests in "mute my mic and dim the screen, then focus for an hour".
+    /// Only split when every part is a command on its own (so "open Safari and Notes" stays one),
+    /// or, with the AI brain on, when the whole isn't a command but each part reads like one.
+    private func steps(in raw: String, t: String) -> [String]? {
+        let pattern = #"(?i)\s*(?:,\s*and then\b|,\s*then\b|\band then\b|\bthen\b|;|,\s*and\b|\band also\b|\band\b|,\s+)\s*"#
+        guard let re = try? NSRegularExpression(pattern: pattern) else { return nil }
+        var parts: [String] = []
+        var last = raw.startIndex
+        for m in re.matches(in: raw, range: NSRange(raw.startIndex..., in: raw)) {
+            guard let r = Range(m.range, in: raw) else { continue }
+            parts.append(String(raw[last..<r.lowerBound]))
+            last = r.upperBound
+        }
+        parts.append(String(raw[last...]))
+        parts = parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".!"))) }.filter { !$0.isEmpty }
+        guard parts.count >= 2, parts.count <= 6 else { return nil }
+        if parts.allSatisfy({ route(Self.normalize($0), raw: $0) != nil }) { return parts }
+        if AIBrain.available, route(t, raw: raw) == nil, parts.allSatisfy({ $0.split(separator: " ").count >= 2 }) { return parts }
+        return nil
+    }
+
+    /// Runs the steps in order. A confirm card pauses the rest until it's clicked.
+    private func runSteps(_ steps: [String], results: [Reply], done: @escaping (Reply) -> Void) {
+        guard let step = steps.first else { return done(Self.combine(results)) }
+        let rest = Array(steps.dropFirst())
+        handleOne(step) { reply in
+            // "Convert this to JPG and move it to Desktop": later steps work on what earlier ones made.
+            if !reply.outputs.isEmpty { self.files = reply.outputs }
+            if let card = reply.confirm {
+                if !rest.isEmpty { self.afterConfirm[card.id] = rest }
+                var shown = reply
+                let before = results.isEmpty ? "" : Self.combine(results).text + "\n"
+                shown.text = before + reply.text + (rest.isEmpty ? "" : "\n(After that: \(rest.joined(separator: ", ")).)")
+                return done(shown)
+            }
+            self.runSteps(rest, results: results + [reply], done: done)
+        }
+    }
+
+    private static func combine(_ results: [Reply]) -> Reply {
+        guard results.count > 1, var out = results.last else { return results.first ?? Reply(text: "Done.") }
+        out.text = results.enumerated().map { "\($0.offset + 1). \($0.element.text)" }.joined(separator: "\n")
+        out.outputs = results.flatMap(\.outputs)
+        return out
     }
 
     /// What she says when a timer runs out.
@@ -140,8 +202,17 @@ final class Brain {
         // Finding files: "find my resume pdf", "where is homework 6", "find photos from last week"
         if let q = FindFiles.parse(raw) { return { FindFiles.run(q) } }
 
+        // Calendar and Reminders: "what's on today", "remind me to … at 9pm", "add … to my calendar"
+        if let action = Agenda.route(t, raw: raw) { return action }
+
         // Control Center: volume, mic, brightness, sound devices, Bluetooth, Do Not Disturb
         if let action = SystemControls.route(t, raw: raw) { return action }
+
+        // Music: "pause", "next song", "what's playing", "play my study playlist"
+        if let action = Music.route(t, raw: raw) { return action }
+
+        // Windows: "put Safari on the left", "make this full screen", "Safari left and Notes right"
+        if let moves = Windows.parse(t) { return { Windows.run(moves) } }
 
         if has(t, "show in finder", "reveal", "show me", "open folder") && !outputs.isEmpty {
             let outs = outputs
@@ -360,6 +431,10 @@ final class Brain {
             • Control Center: volume ("volume 40", "mute"), mic ("mute my mic"), brightness ("dim the screen"), \
             sound devices ("switch output to AirPods"), Bluetooth ("connect to Home Speaker"), Do Not Disturb
             • Show what's in Disposable, or keep a file
+            • Calendar and reminders ("what's on today", "remind me to submit HW 6 at 9pm", "add dentist to my calendar Friday at 3pm")
+            • Music in Spotify or Apple Music ("pause", "next song", "what's playing", "play my study playlist")
+            • Arrange windows ("put Safari on the left", "make this full screen", "Safari left and Notes right")
+            • Several things at once ("mute my mic and dim the screen, then focus for an hour")
             • Listen for “Hey MISA” ("start listening", "stop listening")
             • Update myself from GitHub ("update yourself", "what version are you")
 

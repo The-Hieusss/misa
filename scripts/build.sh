@@ -48,10 +48,15 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>M.I.S.A. reads your calendar when you ask what's on, and adds events you ask for.</string>
+  <key>NSCalendarsUsageDescription</key><string>M.I.S.A. reads your calendar when you ask what's on, and adds events you ask for.</string>
+  <key>NSRemindersFullAccessUsageDescription</key><string>M.I.S.A. adds and checks off reminders when you ask her to.</string>
+  <key>NSRemindersUsageDescription</key><string>M.I.S.A. adds and checks off reminders when you ask her to.</string>
+  <key>NSAccessibilityUsageDescription</key><string>M.I.S.A. arranges your windows when you ask her to.</string>
   <key>NSMicrophoneUsageDescription</key><string>M.I.S.A. listens for “Hey MISA” when you turn it on. What you say stays on this Mac.</string>
   <key>NSSpeechRecognitionUsageDescription</key><string>M.I.S.A. understands what you say after “Hey MISA”, using speech recognition on this Mac.</string>
   <key>NSBluetoothAlwaysUsageDescription</key><string>M.I.S.A. connects and disconnects your paired Bluetooth devices when you ask her to.</string>
-  <key>NSAppleEventsUsageDescription</key><string>M.I.S.A. asks Finder to empty the Trash when you tell her to.</string>
+  <key>NSAppleEventsUsageDescription</key><string>M.I.S.A. asks Finder to empty the Trash, and Spotify or Music to play, pause and skip, when you tell her to.</string>
 </dict>
 </plist>
 EOF

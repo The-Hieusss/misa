@@ -103,6 +103,10 @@ enum IntentAction: String, CaseIterable {
     case switchSoundOutput, switchMicrophone, listSoundDevices
     case connectBluetooth, disconnectBluetooth, bluetoothOn, bluetoothOff
     case doNotDisturbOn, doNotDisturbOff
+    case createEvent, createReminder, showAgenda, nextEvent, showReminders, completeReminder
+    case rescheduleItem, deleteItem, findItem
+    case playMusic, pauseMusic, resumeMusic, nextSong, previousSong, nowPlaying
+    case arrangeWindow
 }
 
 struct Intent {
@@ -124,13 +128,13 @@ struct Intent {
               schema: DynamicGenerationSchema(name: "IntentAction", anyOf: IntentAction.allCases.map(\.rawValue))),
             P(name: "items", description: "Every app, website, or file name the request mentions, one per entry, exactly as written. Empty if none.",
               schema: DynamicGenerationSchema(arrayOf: text)),
-            P(name: "query", description: "Search words (for findFiles: the name plus any type, folder or time words), or the full math expression or unit conversion with every number, like '3 cups in ml'. Empty if none.",
+            P(name: "query", description: "Search words (for findFiles: the name plus any type, folder or time words); the full math expression or unit conversion with every number, like '3 cups in ml'; for createEvent or createReminder the thing plus its day and time exactly as said, like 'dentist friday at 3pm'; for rescheduleItem the thing, 'to', and the new day or time, like 'dentist to monday at 10'; for deleteItem or findItem the thing's name; for playMusic the song, artist or playlist. Empty if none.",
               schema: text),
             P(name: "minutes", description: "Minutes for a focus session, break or timer. 0 if not said.",
               schema: DynamicGenerationSchema(type: Int.self)),
             P(name: "level", description: "Percent 0-100 for setVolume or setBrightness, or how much to change it for up/down. -1 if not said.",
               schema: DynamicGenerationSchema(type: Int.self)),
-            P(name: "destination", description: "Destination folder for moving or copying files, like Desktop or Documents. Empty if none.",
+            P(name: "destination", description: "Destination folder for moving or copying files, like Desktop or Documents; or for arrangeWindow where the window goes: left, right, top, bottom, top left, full screen, center, other screen. Empty if none.",
               schema: text),
             P(name: "reply", description: "For chat: your answer, one or two short sentences. Otherwise a few words, never claiming it's done.",
               schema: text),
@@ -187,23 +191,51 @@ final class Engine: @unchecked Sendable {
     "play it on my AirPods" -> switchSoundOutput, items ["AirPods"]
     "hook up my home speaker" -> connectBluetooth, items ["Home Speaker"]
     "no notifications for a while" -> doNotDisturbOn
+    "don't let me forget to call mom at 6" -> createReminder, query "call mom at 6"
+    "I have a dentist appointment friday at 3" -> createEvent, query "dentist appointment friday at 3"
+    "am I busy tomorrow" -> showAgenda, query "tomorrow"
+    "what do I still have to do" -> showReminders
+    "I submitted the essay" -> completeReminder, query "essay"
+    "the dentist can't do friday, make it monday at 10" -> rescheduleItem, query "dentist to monday at 10"
+    "scrap tomorrow's study session" -> deleteItem, query "tomorrow's study session"
+    "when am I seeing the dentist" -> findItem, query "dentist"
+    "put on some lofi" -> playMusic, query "lofi"
+    "skip this one" -> nextSong
+    "shove chrome to the right side" -> arrangeWindow, items ["Chrome"], destination "right"
+    "make this window take up the whole screen" -> arrangeWindow, destination "full screen"
     """
 
+    /// A fresh session for every request, so an earlier request can't leak into the next one
+    /// ("put Chrome on the right" coming back for "make this full screen"). The next one is
+    /// warmed up in the background so it's ready.
     private func current() -> LanguageModelSession {
-        lock.lock(); defer { lock.unlock() }
-        // A fresh conversation after a quiet spell (and keep the small context window clear).
-        if session == nil || Date().timeIntervalSince(lastUse) > 15 * 60 {
-            session = LanguageModelSession(instructions: Self.instructions)
-        }
+        lock.lock()
+        let s = session ?? LanguageModelSession(instructions: Self.instructions)
+        session = nil
         lastUse = Date()
-        return session!
+        lock.unlock()
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self else { return }
+            let next = LanguageModelSession(instructions: Self.instructions)
+            next.prewarm()
+            self.lock.lock()
+            if self.session == nil { self.session = next }
+            self.lock.unlock()
+        }
+        return s
     }
 
     private func reset() {
         lock.lock(); session = nil; lock.unlock()
     }
 
-    func prewarm() { current().prewarm() }
+    func prewarm() {
+        lock.lock()
+        if session == nil { session = LanguageModelSession(instructions: Self.instructions) }
+        let s = session!
+        lock.unlock()
+        s.prewarm()
+    }
 
     func interpret(_ text: String, files: [URL], timer: String) async -> AIBrain.Outcome {
         var context: [String] = []
@@ -215,7 +247,7 @@ final class Engine: @unchecked Sendable {
             let started = Date()
             let intent = try await respond(prompt)
             FileOps.log("ai: “\(text.prefix(80))” → \(intent.action.rawValue) items=\(intent.items) q=\(intent.query) min=\(intent.minutes) lvl=\(intent.level) dest=\(intent.destination) (\(String(format: "%.1f", Date().timeIntervalSince(started)))s)")
-            return Self.outcome(Self.safeLevels(intent, text: text), files: files)
+            return Self.outcome(Self.grounded(Self.safeLevels(intent, text: text), text: text), files: files)
         } catch {
             FileOps.log("ai: failed: \(error)")
             reset()
@@ -238,6 +270,26 @@ final class Engine: @unchecked Sendable {
     /// The model sometimes turns "it's too loud" into "volume 100" or "volume down 100". A level
     /// only stands when the request gives one (a number, half, all the way...); otherwise it's a
     /// normal step in the direction asked.
+    /// The model sometimes copies an app or a place from its examples ("Chrome", "right").
+    /// For window moves, keep only what the request actually says.
+    private static func grounded(_ i: Intent, text: String) -> Intent {
+        guard i.action == .arrangeWindow else { return i }
+        let t = text.lowercased()
+        var out = i
+        out.items = i.items.filter { t.contains($0.lowercased()) }
+        if out.destination.isEmpty || !t.contains(out.destination.lowercased().replacingOccurrences(of: "the ", with: "")) {
+            let places: [(String, [String])] = [
+                ("full screen", ["whole screen", "full screen", "fullscreen", "entire screen", "maximize", "maximise", "bigger", "fill"]),
+                ("other screen", ["other screen", "other display", "other monitor", "second screen", "next screen"]),
+                ("top left", ["top left", "upper left"]), ("top right", ["top right", "upper right"]),
+                ("bottom left", ["bottom left", "lower left"]), ("bottom right", ["bottom right", "lower right"]),
+                ("left", ["left"]), ("right", ["right"]), ("top", ["top"]), ("bottom", ["bottom"]), ("center", ["center", "centre", "middle"]),
+            ]
+            out.destination = places.first { $0.1.contains(where: t.contains) }?.0 ?? "full screen"
+        }
+        return out
+    }
+
     private static func safeLevels(_ i: Intent, text: String) -> Intent {
         let volume: Set<IntentAction> = [.setVolume, .volumeUp, .volumeDown]
         let bright: Set<IntentAction> = [.setBrightness, .brightnessUp, .brightnessDown]
@@ -342,6 +394,24 @@ final class Engine: @unchecked Sendable {
         case .bluetoothOff: return cmd("turn bluetooth off")
         case .doNotDisturbOn: return cmd("turn on do not disturb")
         case .doNotDisturbOff: return cmd("turn off do not disturb")
+        case .createEvent: return query.isEmpty ? .say("What's the event, and when?") : cmd("add \(query) to my calendar")
+        case .createReminder: return query.isEmpty && items.isEmpty ? .say("What should I remind you about?") : cmd("remind me to \(query.isEmpty ? list : query)")
+        case .showAgenda: return cmd("what's on my calendar \(query.isEmpty ? "today" : query)")
+        case .nextEvent: return cmd("what's next")
+        case .rescheduleItem: return query.isEmpty ? .say("What should I move, and to when?") : cmd(query.lowercased().hasPrefix("move ") ? query : "reschedule \(query)")
+        case .deleteItem: return query.isEmpty && items.isEmpty ? .say("What should I delete?") : cmd("delete \(query.isEmpty ? items[0] : query)")
+        case .findItem: return query.isEmpty && items.isEmpty ? cmd("what's on my calendar this week") : cmd("when is \(query.isEmpty ? items[0] : query)")
+        case .showReminders: return cmd("what are my reminders")
+        case .completeReminder: return query.isEmpty && items.isEmpty ? cmd("what are my reminders") : cmd("mark \(query.isEmpty ? items[0] : query) done")
+        case .playMusic: return query.isEmpty ? cmd("play music") : cmd("play \(query) on \(Music.preferred == .spotify ? "spotify" : "apple music")")
+        case .pauseMusic: return cmd("pause the music")
+        case .resumeMusic: return cmd("resume the music")
+        case .nextSong: return cmd("next song")
+        case .previousSong: return cmd("previous song")
+        case .nowPlaying: return cmd("what's playing")
+        case .arrangeWindow:
+            let place = dest.isEmpty ? (query.isEmpty ? "full screen" : query) : dest
+            return cmd("put \(items.first ?? "this window") on the \(place.lowercased().replacingOccurrences(of: "the ", with: ""))")
         }
     }
 

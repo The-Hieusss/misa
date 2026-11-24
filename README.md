@@ -53,6 +53,19 @@ Turn on **Listen for “Hey MISA”** in her menu bar menu (or say "start listen
 - quit apps: "quit Spotify", "close Safari and Notes". Apps quit the normal way, so anything with unsaved work asks first. "Quit everything" lists the open apps on a confirm card first
 - empty the Trash: "empty the trash", "take out the trash". She lists what's in it first and only empties it when you click the card. Finder does the emptying, so macOS asks once to let her control Finder
 - show what's using your disk (read-only)
+- calendar and reminders (the Mac's own Calendar and Reminders, so they sync to your iPhone through iCloud):
+  - "what's on today", "what do I have tomorrow", "what's on my calendar this week", "what's next", "what are my reminders"
+  - "remind me to submit HW 6 at 9pm", "remind me in 20 minutes to check the oven", "remind me to call mom tomorrow"
+  - "add dentist to my calendar Friday at 3pm for an hour", "schedule study group next Tuesday 4-6pm"
+  - "mark submit HW 6 done" (or "I finished the essay")
+  - find one: "when is my dentist appointment", "what time is the CHM 101 exam"
+  - change one: "move my dentist appointment to Friday at 4", "reschedule study group to next Monday", "push my meeting back 30 minutes", "move the exam earlier by an hour", "make the dentist appointment 2 hours long", "extend the meeting by 30 minutes", "rename dentist to dentist cleaning", "change the reminder to call mom to 7pm"
+  - delete one: "cancel tomorrow's meeting", "delete the reminder to buy milk", "remove the dentist appointment from my calendar"
+  - Every change and delete shows a confirm card first (deletes in red). For a repeating event only that one occurrence changes. If several match, she asks which, by day. Her notifications move or go away with it
+  - New events and reminders show a confirm card first. Then **she sends her own notifications**: when a reminder is due (with **Done** and **Snooze 10 min** buttons) and 10 minutes before an event she added. macOS delivers them even when she isn't running. The first time, macOS asks for Calendars or Reminders access, and for notifications
+- music in Spotify or Apple Music: "pause", "next song", "previous song", "what's playing", "shuffle on", "play my study playlist", "play lofi on spotify". Apple Music plays playlists and songs from your library by name; Spotify doesn't let other apps pick songs, so she opens Spotify's search for you. With neither open, play/pause and skip use the media keys (YouTube in a browser, Podcasts…). macOS asks once to let her control each app
+- arrange windows: "put Safari on the left", "snap this to the right half", "top right corner", "left third", "make Notes full screen", "center this", "move this to the other screen", "Safari on the left and Notes on the right". "This" means the app you were using before you talked to her. Needs **Accessibility** permission (System Settings > Privacy & Security > Accessibility); because development builds aren't signed, macOS may ask again after she updates
+- several things at once: "mute my mic and dim the screen, then focus for an hour". She runs each part in order and numbers the answers; a confirm card pauses the rest until you click it. A step that makes files hands them to the next ("convert to jpg and move it to Desktop")
 - work Control Center:
   - volume: "volume 40", "turn it up", "volume down 10", "mute", "unmute", "what's the volume"
   - microphone: "mute my mic", "unmute my mic" (back to its old level)

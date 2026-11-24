@@ -30,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         listenForDevCommands()
         UNUserNotificationCenter.current().delegate = self
+        Notices.register()
+        Windows.startTracking()
     }
 
     /// Developer hooks, e.g. from Terminal:
@@ -162,6 +164,11 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     /// Clicking a banner opens the chat, where the message (and its Update button) is waiting.
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler done: @escaping () -> Void) {
+        // Done / Snooze on a reminder act right there; tapping the banner opens the chat.
+        if response.actionIdentifier == Notices.done || response.actionIdentifier == Notices.snooze {
+            Notices.handle(response)
+            return done()
+        }
         DispatchQueue.main.async { [weak self] in
             self?.controller.show()
             self?.controller.openChat()

@@ -18,6 +18,8 @@ let package = Package(
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("Speech"),
                 .linkedFramework("SoundAnalysis"),
+                .linkedFramework("EventKit"),
+                .linkedFramework("ApplicationServices"),
             ]
         )
     ]
